@@ -1,9 +1,5 @@
 # personalcloudplatform
 
-[![GNU AGPLv3](AGPLv3_Logo.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-
-[Third-party dependency license report](../../pkg/licenses/LICENSE-REVIEW.md) (also served in-app at `/licenses`)
-
 Personal Cloud Platform (PCP): a self-hosted consumer ecosystem on
 databox, and the flagship example of building a real application on it.
 Login lands on a launcher of six apps; every user, session, file byte,
@@ -171,3 +167,9 @@ fake, wire-format and trust-boundary suites for both gateways
 (`pkg/{postoffice,cloudferry}/trustboundary_test.go`), API response
 shapes, template sets. `cmd/smoke` drives the real binaries against a
 real databox node end to end.
+
+## License
+
+[![GNU AGPLv3](AGPLv3_Logo.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
+
+[Third-party dependency license report](../../pkg/licenses/LICENSE-REVIEW.md) (also served in-app at `/licenses`)
