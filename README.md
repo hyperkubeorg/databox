@@ -5,9 +5,7 @@ Use the Github issues for any change requests/discussions or bug reporting.
 
 # databox
 
-[![GNU AGPLv3](AGPLv3_Logo.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-
-[Third-party dependency license report](pkg/licenses/LICENSE-REVIEW.md) (also served in-app at `/licenses`)
+Check out the [Meet the Cluster](https://meetthecluster.github.io/) to see visualizer and simulations of databox.
 
 Distributed key-value and blob storage in a single Go binary. Raft-replicated
 KV (linearizable reads/writes, snapshot-isolation transactions, watches,
@@ -115,3 +113,9 @@ Releases are built by the workflow described under [Artifacts](#artifacts).
 `§N` markers in code comments are stable design-decision tags from the
 original (retired) internal spec; they group related decisions so you can
 grep every site of one design choice.
+
+# License
+
+[![GNU AGPLv3](AGPLv3_Logo.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
+
+[Third-party dependency license report](pkg/licenses/LICENSE-REVIEW.md) (also served in-app at `/licenses`)
