@@ -1,0 +1,385 @@
+/*
+ * style.css — the one hand-written stylesheet for the databox portal (§4).
+ *
+ * Design rules:
+ *   - system font stacks only; zero external requests (air-gapped operation)
+ *   - dark-friendly: colors come from CSS variables that flip with the
+ *     user's prefers-color-scheme
+ *   - density and clarity over decoration: this UI serves admins and
+ *     developers reading tables of keys, nodes, and shards
+ */
+
+/* ---- palette ----------------------------------------------------------- */
+
+:root {
+  /* light scheme defaults */
+  --bg: #f6f7f9;          /* page background */
+  --panel: #ffffff;       /* nav, cards */
+  --fg: #1c2128;          /* body text */
+  --muted: #667085;       /* secondary text */
+  --border: #d5dae1;      /* hairlines */
+  --accent: #2563eb;      /* links, focus, primary buttons */
+  --accent-fg: #ffffff;   /* text on accent */
+  --ok-bg: #d9f2e2;  --ok-fg: #146c2e;   /* green pills */
+  --bad-bg: #fbdcdc; --bad-fg: #a11c1c;  /* red pills / danger */
+  --warn-bg: #fcefc7; --warn-fg: #7a5300;/* yellow banners */
+  --code-bg: #eef0f3;     /* inline code + <pre> */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b;
+    --panel: #1c2127;
+    --fg: #d7dde4;
+    --muted: #8b96a5;
+    --border: #303842;
+    --accent: #4c8dff;
+    --accent-fg: #0c1017;
+    --ok-bg: #12341d;  --ok-fg: #6fd58d;
+    --bad-bg: #3d1414; --bad-fg: #ff8484;
+    --warn-bg: #3a2f0d; --warn-fg: #e6c35c;
+    --code-bg: #11151a;
+  }
+}
+
+/* ---- base -------------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  /* system font stack — never fetch a font */
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* column layout so a full-bleed page (the cluster map) can claim all
+     remaining height under the nav */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main { max-width: 72rem; width: 100%; margin: 0 auto; padding: 1rem 1.25rem 3rem; flex: 1 1 auto; }
+
+h1 { font-size: 1.4rem; margin: 1rem 0 0.75rem; }
+h2 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, pre {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+}
+code { background: var(--code-bg); padding: 0.05rem 0.3rem; border-radius: 3px; }
+
+pre.value {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  overflow: auto;
+  max-height: 32rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+pre.console { min-height: 16rem; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.85em; }
+
+/* ---- navigation -------------------------------------------------------- */
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1.25rem;
+}
+nav .brand { font-weight: 700; letter-spacing: 0.03em; }
+nav a { color: var(--fg); padding: 0.2rem 0.4rem; border-radius: 4px; }
+nav a.active { background: var(--accent); color: var(--accent-fg); }
+nav a:hover { text-decoration: none; background: var(--code-bg); }
+nav a.active:hover { background: var(--accent); }
+nav .spacer { flex: 1; }        /* pushes user + logout to the right */
+nav .who { color: var(--muted); }
+
+/* ---- banners & pills ---------------------------------------------------- */
+
+.banner {
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  margin: 0.75rem 0;
+  border: 1px solid var(--border);
+}
+.banner-error { background: var(--bad-bg); color: var(--bad-fg); }
+.banner-warn  { background: var(--warn-bg); color: var(--warn-fg); }
+
+.pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0 0.55rem;
+  font-size: 0.8em;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+}
+.pill-ok  { background: var(--ok-bg);  color: var(--ok-fg);  border-color: transparent; }
+.pill-bad { background: var(--bad-bg); color: var(--bad-fg); border-color: transparent; }
+
+.statline { display: flex; gap: 1rem; align-items: center; margin: 0.5rem 0 1rem; }
+
+.verb {
+  display: inline-block;
+  font-size: 0.78em;
+  background: var(--code-bg);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  margin-right: 0.15rem;
+}
+.grant { margin: 0.15rem 0; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+
+/* ---- tables ------------------------------------------------------------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+th, td {
+  text-align: left;
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th { font-weight: 600; color: var(--muted); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.04em; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--code-bg); }
+
+td .inline, .actions form { display: inline-block; margin-right: 0.3rem; }
+
+/* ---- forms -------------------------------------------------------------- */
+
+input[type=text], input[type=password], select, textarea {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+}
+textarea { width: 100%; font-family: ui-monospace, Menlo, Consolas, monospace; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+
+button, a.button {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: none;
+  border-radius: 4px;
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+a.button:hover { text-decoration: none; filter: brightness(1.1); }
+button:hover { filter: brightness(1.1); }
+button.danger { background: var(--bad-fg); color: var(--bad-bg); }
+button.small { padding: 0.1rem 0.5rem; font-size: 0.85em; }
+
+label { display: block; margin: 0.35rem 0; }
+label.inline { display: inline-block; margin-right: 0.75rem; }
+fieldset { border: 1px solid var(--border); border-radius: 6px; }
+legend { color: var(--muted); font-size: 0.85em; }
+
+.toolbar { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin: 0.75rem 0; }
+.toolbar label { display: flex; gap: 0.4rem; align-items: center; margin: 0; }
+.stack { max-width: 28rem; }
+.cols { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.cols section { flex: 1; min-width: 20rem; }
+
+/* ---- login -------------------------------------------------------------- */
+
+.login-box {
+  max-width: 22rem;
+  margin: 12vh auto 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem 2rem 2rem;
+}
+.login-box h1 { margin-top: 0; }
+.login-box input { width: 100%; }
+.login-box button { width: 100%; margin-top: 0.75rem; }
+.agpl { text-align: center; margin: 1.25rem auto 0; }
+.agpl img { opacity: 0.7; }
+.agpl a:hover img { opacity: 1; }
+
+/* ---- misc --------------------------------------------------------------- */
+
+details { margin: 0.4rem 0; }
+details summary { cursor: pointer; }
+
+/* Watch console live indicator: green while a stream is open (watch.tpl). */
+.live { color: #2ecc71; font-weight: 600; }
+
+/* ---- cluster map (cluster.tpl + cluster.js) ------------------------------
+   The explorable topology graph, in the "Meet the Cluster" visual
+   language. The map surface is deliberately dark in BOTH color schemes —
+   it is a night map, not a document. */
+
+.cmap {
+  position: relative;
+  /* fallback sizing for browsers without :has(); normally the full-bleed
+     rules below take over */
+  height: calc(100vh - 190px);
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: grab;
+  color: #d7e1ee;
+  background:
+    radial-gradient(1200px 700px at 60% 20%, #101a35 0%, #0b1020 60%),
+    #0b1020;
+}
+/* Full-bleed: on the map page, main drops its gutter and the map fills
+   everything under the nav. */
+main:has(> .cmap) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+main:has(> .cmap) > .banner { margin: 0.5rem 1rem; }
+main:has(> .cmap) > .cmap {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+}
+.cmap.grabbing { cursor: grabbing; }
+.cmap-grid {
+  position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    linear-gradient(#16203a 1px, transparent 1px),
+    linear-gradient(90deg, #16203a 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.cmap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* edges */
+.cmap-edge { stroke: #27334f; stroke-width: 1.2; }
+.cmap-edge-meta { stroke: #4a68a4; stroke-width: 1.8; stroke-dasharray: 4 4; }
+.cmap-edge-shard { stroke: #223050; }
+.cmap-edge-hot { stroke: #5ab0ff; stroke-width: 1.8; opacity: .8; }
+.cmap-edge-hit { stroke: transparent; stroke-width: 12; fill: none; cursor: help; }
+
+/* nodes */
+.cmap-gnode { cursor: pointer; }
+.cmap-node-shape { fill: #1b2440; stroke: #3d4f7c; stroke-width: 1.5; }
+.cmap-node-shape-meta { fill: #1d2a4a; stroke: #4a68a4; }
+.cmap-node-ring { fill: none; stroke: #52d28e; stroke-width: 2; opacity: .85; }
+.cmap-st-down .cmap-node-ring { stroke: #ff6b6b; stroke-dasharray: 5 4; }
+.cmap-st-down .cmap-node-shape { fill: #241722; stroke: #5c3040; }
+.cmap-st-decom .cmap-node-ring { stroke: #ffb347; stroke-dasharray: 8 4; animation: cmap-spin 3s linear infinite; }
+@keyframes cmap-spin { to { stroke-dashoffset: -24; } }
+.cmap-gnode:hover .cmap-node-shape { stroke: #5ab0ff; }
+.cmap-node-icon { fill: #aebbdb; font-size: 17px; dominant-baseline: middle; pointer-events: none; }
+.cmap-st-down .cmap-node-icon { fill: #ff6b6b; }
+.cmap-node-label { fill: #e7eefb; font-size: 13px; font-weight: 600; pointer-events: none; }
+.cmap-node-sub { fill: #7f8db0; font-size: 10.5px; pointer-events: none; }
+.cmap-node-warntxt { fill: #ffb347; }
+.cmap-node-crown { fill: #ffd75e; font-size: 13px; pointer-events: none; }
+.cmap-node-meta { fill: #6fd5ff; font-size: 16px; font-weight: 700; }
+.cmap-node-meta-lead { fill: #ffd75e; }
+
+/* overlays */
+.cmap-legend {
+  position: absolute; left: 12px; bottom: 12px; z-index: 4;
+  background: rgba(15, 21, 38, .92); border: 1px solid #2a3654; border-radius: 10px;
+  padding: 9px 13px; font-size: 12px; color: #9fb0d0; line-height: 1.8;
+}
+.cmap-legend b { color: #d7e1ee; font-weight: 600; }
+.cmap-dim { color: #7f8db0; }
+.cmap-zoom { position: absolute; right: 12px; bottom: 12px; z-index: 4; display: flex; flex-direction: column; gap: 6px; }
+.cmap-zoom button {
+  width: 34px; height: 34px; border-radius: 8px; border: 1px solid #2a3654;
+  background: #141b2e; color: #d7e1ee; font-size: 16px; cursor: pointer; padding: 0;
+}
+.cmap-zoom button:hover { border-color: #5ab0ff; filter: none; }
+.cmap-status {
+  position: absolute; left: 12px; top: 12px; z-index: 4;
+  background: rgba(15, 21, 38, .92); border: 1px solid #2b5a41; border-radius: 999px;
+  padding: 4px 12px; font-size: 12px; color: #52d28e;
+}
+.cmap-status-bad { border-color: #6b2a2a; color: #ff6b6b; }
+
+/* node info windows — floating, draggable by header, many at once,
+   resizable from every edge and corner (cluster.js clamps them inside
+   the map on drag, resize, and viewport changes) */
+.cmap-win {
+  position: absolute; z-index: 10;
+  width: 400px; min-width: 280px; max-width: calc(100% - 8px);
+  min-height: 140px; max-height: calc(100% - 8px);
+  display: flex; flex-direction: column;
+  background: #141b2e; border: 1px solid #33405f; border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+/* manual resize — every edge and corner is a live handle, OS-style */
+.cmap-win-grip {
+  position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+  border-radius: 0 0 12px 0; pointer-events: none;
+  background: linear-gradient(135deg, transparent 50%, #3d4f7c 50%);
+}
+.cmap-win-hdl { position: absolute; z-index: 5; }
+.cmap-win-hdl-n  { top: -4px; left: 12px; right: 12px; height: 8px; cursor: ns-resize; }
+.cmap-win-hdl-s  { bottom: -4px; left: 12px; right: 12px; height: 8px; cursor: ns-resize; }
+.cmap-win-hdl-e  { right: -4px; top: 12px; bottom: 12px; width: 8px; cursor: ew-resize; }
+.cmap-win-hdl-w  { left: -4px; top: 12px; bottom: 12px; width: 8px; cursor: ew-resize; }
+.cmap-win-hdl-ne { top: -5px; right: -5px; width: 15px; height: 15px; cursor: nesw-resize; }
+.cmap-win-hdl-nw { top: -5px; left: -5px; width: 15px; height: 15px; cursor: nwse-resize; }
+.cmap-win-hdl-se { bottom: -5px; right: -5px; width: 17px; height: 17px; cursor: nwse-resize; }
+.cmap-win-hdl-sw { bottom: -5px; left: -5px; width: 15px; height: 15px; cursor: nesw-resize; }
+.cmap-win-head {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: #1a2340; border-radius: 12px 12px 0 0; border-bottom: 1px solid #2c3a5e;
+  font-size: 13px; font-weight: 600; color: #cfe0ff;
+  cursor: move; user-select: none; touch-action: none;
+}
+.cmap-win-head span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmap-win-head button {
+  width: 24px; height: 24px; border-radius: 6px; border: none; cursor: pointer;
+  background: #263255; color: #b9c8ea; font-size: 13px; line-height: 1; padding: 0;
+  flex: none;
+}
+.cmap-win-head button:hover { background: #7a2f3a; color: #fff; filter: none; }
+.cmap-win-body { flex: 1 1 auto; overflow: auto; padding: 12px 16px; font-size: 13px; user-select: text; cursor: auto; }
+.cmap-win-body h3 { margin: 14px 0 4px; font-size: 13px; color: #9fc4ff; }
+.cmap-win-body p { margin: 4px 0; color: #c3cfe5; }
+.cmap-win-body code {
+  background: #0d1428; border: 1px solid #26335a; color: #9fd0ff;
+  font-size: 12px; border-radius: 5px; padding: 1px 6px;
+}
+.cmap-p-head { padding: 7px 10px; border-radius: 8px; background: #0d1428; color: #c3cfe5; }
+.cmap-p-down { color: #ff6b6b; }
+.cmap-p-decom { color: #ffb347; }
+.cmap-p-t { border-collapse: collapse; width: 100%; font-size: 12px; margin: 4px 0; background: none; border: none; }
+.cmap-p-t th { text-align: left; color: #7f8db0; font-weight: 500; padding: 2px 8px 2px 0; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.cmap-p-t td { padding: 2px 8px 2px 0; border-top: 1px solid #222c49; border-bottom: none; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; color: #c3cfe5; word-break: break-all; }
+.cmap-p-t tr:hover td { background: none; }
+
+/* edge tooltip rides the document body, outside the map's overflow clip */
+.cmap-tip {
+  position: fixed; display: none; z-index: 9200; max-width: 270px;
+  background: #141b2e; border: 1px solid #33436f; border-radius: 8px;
+  padding: 6px 10px; font-size: 12px; line-height: 1.5; color: #c3cfe5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5); pointer-events: none; word-break: break-word;
+}
+.cmap-tip b { color: #dfe9fa; }
+.cmap-tip-meta { color: #6fd5ff; }

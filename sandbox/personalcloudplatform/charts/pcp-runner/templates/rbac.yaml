@@ -1,0 +1,37 @@
+{{- if .Values.rbac.create -}}
+# rbac.yaml — the k8s executor acts as an operator (Draft 003 §6.4): it
+# creates one Pod per build phase, attaches to stream its logs, and
+# deletes it. This Role grants exactly that, scoped to the release
+# namespace — the runner never touches cluster-wide resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "pcp-runner.fullname" . }}
+  labels:
+    {{- include "pcp-runner.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/attach"]
+    verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "pcp-runner.fullname" . }}
+  labels:
+    {{- include "pcp-runner.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "pcp-runner.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "pcp-runner.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

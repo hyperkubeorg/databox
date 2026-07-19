@@ -1,0 +1,79 @@
+# deployment.yaml — the runner process. An init container performs the
+# one-time `pcp-runner setup` from the pairing setup code (idempotent: it
+# skips if the data dir is already paired), writing the runner identity to
+# a persistent volume; the main container then dials PCP and serves jobs.
+# The completion code the init step prints goes to its log — read it with
+#   kubectl logs deploy/<release>-pcp-runner -c setup
+# and paste it into the admin console to finish pairing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pcp-runner.fullname" . }}
+  labels:
+    {{- include "pcp-runner.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  # One identity, one control session — never run two pods off one PVC.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "pcp-runner.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "pcp-runner.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "pcp-runner.serviceAccountName" . }}
+      initContainers:
+        - name: setup
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Pair once; a re-run on an already-paired data dir is a no-op.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              if [ -f /data/identity.json ]; then
+                echo "already paired; skipping setup"
+                exit 0
+              fi
+              printf '%s\n%s\n' "$SETUP_CODE" "$ENDPOINT" | pcp-runner setup --data-dir /data --kind k8s
+          env:
+            - name: SETUP_CODE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pcp-runner.setupSecretName" . }}
+                  key: setup-code
+            - name: ENDPOINT
+              value: {{ .Values.pairing.endpoint | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: pcp-runner
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - run
+            - --data-dir=/data
+            - --executor=k8s
+            - --namespace=$(POD_NAMESPACE)
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "pcp-runner.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

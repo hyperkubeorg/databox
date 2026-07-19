@@ -1,0 +1,20 @@
+{{- if .Values.persistence.enabled -}}
+# pvc.yaml — persists the runner's pairing identity across restarts. The
+# pairing token is single-use, so the identity minted at first boot must
+# survive a reschedule or PCP will no longer recognize the runner.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "pcp-runner.fullname" . }}-data
+  labels:
+    {{- include "pcp-runner.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

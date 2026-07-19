@@ -1,0 +1,13 @@
+# Chart.yaml — a Personal Cloud Platform Build Runner (Draft 003 §6.4):
+# a separate in-cluster process that runs repository build pipelines as
+# Pods (the k8s executor) on behalf of a paired PCP. It is NOT the pcp
+# app — it holds only its pairing identity and dials PCP's buildwire port.
+apiVersion: v2
+name: pcp-runner
+description: Personal Cloud Platform Build Runner (Kubernetes executor — one Pod per build phase), paired to a PCP
+type: application
+# The release workflow overrides both at package time with the run's UTC
+# date stamp (YYYYMMDD.HHMMSS): a published chart deploys its matching
+# image; a git checkout deploys latest.
+version: 0.1.0
+appVersion: "latest"

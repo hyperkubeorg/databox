@@ -1,0 +1,25 @@
+# Headless Service for Raft peer discovery (§18): gives
+# every StatefulSet pod a stable DNS name
+# (<pod>.<name>.<namespace>.svc.<clusterDomain>) that databox uses as its
+# --advertise address. Not for clients — use the regular Service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "databox.headlessServiceName" . }}
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+spec:
+  # Headless: no virtual IP; DNS resolves straight to pod IPs.
+  clusterIP: None
+  # Peers must resolve each other's names before the pods pass readiness —
+  # a joining node needs pod-0's DNS while pod-0 is still starting.
+  publishNotReadyAddresses: true
+  ports:
+    - port: 8443
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    {{- include "databox.selectorLabels" . | nindent 4 }}
+    # Peer discovery covers storage pods only, never gateways.
+    app.kubernetes.io/component: server

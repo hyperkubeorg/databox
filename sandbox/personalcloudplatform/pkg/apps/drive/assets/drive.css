@@ -1,0 +1,122 @@
+/* drive.css — the Drive app's own layer over the shared design system
+   (tokens.css + components.css): the two-column shell, the browser grid
+   and rows views, toolbar, selection, context menu, marquee, dialogs,
+   the upload dock, and the public share page. No app-local palette —
+   everything derives from the tokens. */
+
+/* ---- shell ---- */
+.dlayout{display:grid;grid-template-columns:236px minmax(0,1fr);gap:0;flex:1;min-height:0}
+.dside{padding:18px 14px;border-right:1px solid var(--border-soft);display:flex;flex-direction:column;min-height:calc(100vh - 53px)}
+.dnav{display:flex;flex-direction:column;gap:2px;margin-bottom:auto}
+.dnav__item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);color:var(--text-dim);font-size:13.5px;font-weight:500;text-decoration:none}
+.dnav__item:hover{background:var(--surface-2);color:var(--text);text-decoration:none}
+.dnav__item.is-on{background:var(--accent-tint);color:var(--text)}
+.dnav__item svg{width:17px;height:17px;flex:none;color:var(--text-faint)}
+.dnav__item.is-on svg{color:var(--accent)}
+.dnav__item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dnav__role{font-style:normal;font-size:11px;color:var(--text-faint)}
+.dmeter{margin-top:18px}
+.dmeter__bar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.dmeter__bar i{display:block;height:100%;background:var(--accent);border-radius:4px;min-width:2px}
+.dmeter__bar i.hot{background:var(--danger)}
+.dmeter__label{font-size:12px;color:var(--text-faint);margin-top:7px}
+.dmain{padding:18px 22px;display:flex;flex-direction:column;min-width:0}
+.dtitle{font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+@media(max-width:860px){.dlayout{grid-template-columns:1fr}.dside{display:none}}
+
+/* ---- crumbs ---- */
+.crumbs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px;margin-bottom:12px}
+.crumbs a{color:var(--text-dim);font-weight:500}
+.crumbs a:last-of-type{color:var(--text);font-weight:600}
+.crumbs .sep{color:var(--text-faint)}
+
+/* ---- toolbar ---- */
+.dtoolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.dtoolbar .spring{flex:1}
+.tsel{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text-dim);font:inherit;font-size:13px;padding:7px 9px}
+.selbar{display:none;align-items:center;gap:8px}
+.selbar.on{display:flex}
+#selcount{font-size:13px;color:var(--text-dim)}
+
+/* ---- browser surface ---- */
+.browser{position:relative;min-height:340px;border-radius:var(--r-lg);outline:none}
+.browser.dragover::after{content:"Drop files to upload";position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:17px;font-weight:600;color:var(--text);background:var(--accent-tint);border:2px dashed var(--accent-dim);border-radius:var(--r-lg)}
+.dempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:60px 30px;color:var(--text-faint);font-size:13.5px}
+.dempty b{font-family:var(--display);font-size:16px;color:var(--text)}
+
+/* grid view */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-content:start}
+.grid .item{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid transparent;border-radius:var(--r-md);cursor:default;user-select:none}
+.grid .item:hover{background:var(--surface-2)}
+.grid .item .thumb{height:92px;border-radius:8px;background:var(--surface);display:grid;place-items:center;overflow:hidden;position:relative}
+.grid .item .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.grid .item .thumb svg{width:34px;height:34px;color:var(--text-faint)}
+.grid .item .tname{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid .item .tmeta{font-size:11.5px;color:var(--text-faint)}
+.grid .item .rsize,.grid .item .rkind,.grid .item .rtime{display:none}
+
+/* rows view (same markup, .rows on the container) */
+.rows{display:flex;flex-direction:column}
+.rows .item{display:grid;grid-template-columns:minmax(0,1fr) 110px 90px 130px;align-items:center;gap:12px;padding:8px 12px;border-radius:var(--r-sm);cursor:default;user-select:none}
+.rows .item:hover{background:var(--surface-2)}
+.rows .item .thumb{display:flex;align-items:center;gap:10px;min-width:0;grid-column:1;height:auto;background:none}
+.rows .item .thumb img{display:none}
+.rows .item .thumb svg{width:20px;height:20px;flex:none;color:var(--text-faint)}
+.rows .item .tname{grid-column:1;grid-row:1;margin-left:30px;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .item .thumb{grid-row:1;width:20px}
+.rows .item .tmeta{display:none}
+.rows .item .rsize,.rows .item .rkind,.rows .item .rtime{display:block;font-size:12.5px;color:var(--text-faint);white-space:nowrap}
+@media(max-width:660px){.rows .item{grid-template-columns:minmax(0,1fr) 90px}.rows .item .rkind,.rows .item .rtime{display:none}}
+
+/* selection + drag states (both views) */
+.item.selected{background:var(--accent-tint)!important;border-color:var(--accent-dim)}
+.item.cut{opacity:.45}
+.item.droptarget,.crumbs a.droptarget{outline:2px dashed var(--accent-dim);outline-offset:2px;border-radius:6px}
+.marquee{position:absolute;z-index:6;border:1px solid var(--accent-dim);background:var(--accent-tint);pointer-events:none}
+.regbadge{color:var(--accent);border:1px solid var(--accent-dim);margin-left:6px;vertical-align:middle}
+
+/* ---- context menu ---- */
+.cmenu{position:fixed;z-index:80;min-width:210px;background:var(--raise);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow);padding:5px;display:none}
+.cmenu.open{display:block}
+.cmenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text)}
+.cmenu button:hover{background:var(--accent-tint)}
+.cmenu button.danger:hover{background:rgba(232,116,107,.12);color:var(--danger)}
+.cmenu .cm-sep{height:1px;background:var(--border-soft);margin:5px 8px}
+
+/* ---- dialogs ---- */
+.dmodal{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:20px;min-width:320px;max-width:92vw}
+.dmodal::backdrop{background:rgba(0,0,0,.45)}
+.dmodal h3{font-family:var(--display);font-size:15px;margin-bottom:12px}
+.mvlist{display:flex;flex-direction:column;max-height:260px;overflow:auto;margin-top:6px}
+.mvlist .mvrow{padding:8px 10px;border-radius:7px;font-size:13.5px;cursor:pointer}
+.mvlist .mvrow:hover{background:var(--surface-2)}
+.mvlist .dempty{padding:18px}
+
+/* ---- upload dock ---- */
+.uploads{position:fixed;right:24px;bottom:0;width:340px;max-width:calc(100vw - 48px);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:var(--shadow);z-index:60;display:none;flex-direction:column;max-height:44vh}
+.uploads.open{display:flex}
+.uploads__bar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-3);border-radius:var(--r-lg) var(--r-lg) 0 0}
+.uploads__bar b{flex:1;font-family:var(--display);font-size:13px;font-weight:600}
+.uploads ul{list-style:none;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.uploads .uname{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px}
+.uploads .uname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uploads .ubar{height:4px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.uploads .ubar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.uploads li.done .ubar i{background:var(--good)}
+.uploads li.failed .ubar i{background:var(--danger)}
+
+/* ---- tables ---- */
+.dtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.dtable th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border-soft)}
+.dtable td{padding:9px 10px;border-bottom:1px solid var(--border-soft)}
+.inline{display:inline}
+
+/* ---- public share page ---- */
+.sharepage{max-width:760px;margin:0 auto;padding:36px 18px 60px}
+.sharerows{display:flex;flex-direction:column}
+.sharerow{display:grid;grid-template-columns:minmax(0,1fr) 100px 80px 110px;align-items:center;gap:12px;padding:9px 10px;border-radius:var(--r-sm);color:var(--text);text-decoration:none;font-size:13.5px}
+.sharerow:hover{background:var(--surface-2);text-decoration:none}
+.sharerow .rname{display:flex;align-items:center;gap:10px;min-width:0;font-weight:600}
+.sharerow .rname svg{width:19px;height:19px;flex:none;color:var(--text-faint)}
+.sharerow .rname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sharerow .rmeta{font-size:12.5px;color:var(--text-faint);white-space:nowrap}

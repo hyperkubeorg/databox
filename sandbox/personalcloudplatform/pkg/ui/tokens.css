@@ -1,0 +1,90 @@
+/* tokens.css — the PCP design tokens, taken VERBATIM from the Slate
+   mockup (REFERENCES/email-mockup.html): dark-first, light theme on
+   body.light. Plus the self-hosted font faces (pkg/ui/fonts). Every app
+   consumes this one file; no app-local palettes. */
+
+/* ---- fonts (self-hosted variable WOFF2, latin + latin-ext subsets) ---- */
+@font-face{
+  font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url(/static/fonts/inter/inter-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url(/static/fonts/inter/inter-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face{
+  font-family:'Space Grotesk';font-style:normal;font-weight:500 700;font-display:swap;
+  src:url(/static/fonts/spacegrotesk/spacegrotesk-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:'Space Grotesk';font-style:normal;font-weight:500 700;font-display:swap;
+  src:url(/static/fonts/spacegrotesk/spacegrotesk-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face{
+  font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url(/static/fonts/newsreader/newsreader-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url(/static/fonts/newsreader/newsreader-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---- tokens (mockup :root, verbatim) ---- */
+:root{
+  --bg:#0C0F14;
+  --surface:#12161D;
+  --surface-2:#171C24;
+  --surface-3:#1E2530;
+  --raise:#222A36;
+  --border:#252D39;
+  --border-soft:#1C222C;
+  --text:#E8ECF2;
+  --text-dim:#98A2B1;
+  --text-faint:#606B7B;
+  --accent:#4C8DFF;
+  --accent-2:#2f6fe0;
+  --accent-dim:#2f5fa8;
+  --accent-tint:rgba(76,141,255,0.14);
+  --accent-tint-2:rgba(76,141,255,0.08);
+  --accent-glow:rgba(76,141,255,.5);
+  --selection:rgba(76,141,255,.40);
+  --on-accent:#fff;
+  --link:#6FB6E8;
+  --danger:#E8746B;
+  --good:#67C99A;
+  --read-text:#DCE1E9;
+  --strong:#ffffff;
+  --chip-border-hover:#333c4b;
+  --ui:'Inter',system-ui,sans-serif;
+  --display:'Space Grotesk',sans-serif;
+  --read:'Newsreader',Georgia,serif;
+  --r-lg:14px; --r-md:10px; --r-sm:8px;
+  --list-w:372px; --side-w:236px;
+  --shadow:0 18px 50px -12px rgba(0,0,0,.7), 0 0 0 1px var(--border);
+}
+body.light{
+  --bg:#EEF1F6;
+  --surface:#FFFFFF;
+  --surface-2:#F5F7FB;
+  --surface-3:#EDF1F7;
+  --raise:#E4EAF2;
+  --border:#DCE2EC;
+  --border-soft:#E7ECF3;
+  --text:#182233;
+  --text-dim:#5B6676;
+  --text-faint:#8A96A6;
+  --accent-tint:rgba(76,141,255,0.12);
+  --accent-tint-2:rgba(76,141,255,0.06);
+  --selection:rgba(76,141,255,.30);
+  --link:#2f6fe0;
+  --read-text:#26303F;
+  --strong:#0C1421;
+  --chip-border-hover:#c3ccda;
+  --shadow:0 18px 50px -14px rgba(23,39,71,.22), 0 0 0 1px var(--border);
+}

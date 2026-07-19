@@ -1,0 +1,102 @@
+# deployment.yaml — pcp is stateless, so a Deployment (not a
+# StatefulSet) is the right shape: replicas are interchangeable, rolling
+# updates are free, and scaling is a one-number change. All state lives
+# in the databox cluster; the background loops elect a single sweeper
+# per pass with databox locks, so N replicas never double-run a worker.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pcp.fullname" . }}
+  labels:
+    {{- include "pcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "pcp.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "pcp.serviceAccountName" . }}
+      containers:
+        - name: pcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # Where the databox cluster lives — the databox chart's
+            # client service, same namespace by default.
+            - name: DATABOX_ENDPOINT
+              value: {{ .Values.databox.endpoint | quote }}
+            - name: DATABOX_USER
+              value: {{ .Values.databox.user | quote }}
+            # The password comes from the databox chart's generated auth
+            # secret — never from chart values, never plain in YAML.
+            - name: DATABOX_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.databox.existingSecret }}
+                  key: {{ .Values.databox.existingSecretKey }}
+            # TLS terminates at the edge (ingress or a paired cloudferry);
+            # pod-local traffic is HTTP, so cookies cannot carry Secure.
+            - name: INSECURE_COOKIES
+              value: "1"
+            - name: LISTEN
+              value: ":8080"
+            # Git-over-SSH listen address; empty disables the transport.
+            - name: PCP_GIT_SSH_ADDR
+              value: {{ if .Values.gitSSH.enabled }}":{{ .Values.gitSSH.port }}"{{ else }}""{{ end }}
+            {{- if .Values.adminUser }}
+            # Admin bootstrap: this member is promoted to site admin as
+            # soon as their account exists (a background poll in main.go).
+            - name: PCP_ADMIN
+              value: {{ .Values.adminUser | quote }}
+            {{- end }}
+            {{- if .Values.signupMode }}
+            - name: PCP_SIGNUP_MODE
+              value: {{ .Values.signupMode | quote }}
+            {{- end }}
+            {{- if .Values.defaultQuota }}
+            - name: PCP_DEFAULT_QUOTA
+              value: {{ .Values.defaultQuota | quote }}
+            {{- end }}
+            {{- if .Values.maxUpload }}
+            - name: PCP_MAX_UPLOAD
+              value: {{ .Values.maxUpload | quote }}
+            {{- end }}
+            {{- range $name, $value := .Values.extraEnv }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+            {{- if .Values.gitSSH.enabled }}
+            - name: ssh
+              containerPort: {{ .Values.gitSSH.port }}
+            {{- end }}
+          # /healthz answers once the app holds a databox session, so
+          # readiness naturally waits out the databox bootstrap window
+          # (the app retries its login until the cluster is up).
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          # The startupProbe gives the login-retry loop up to 5 MINUTES
+          # before liveness arms: the app is DESIGNED to wait for the
+          # cluster, and killing it every 30s just resets the wait. Once
+          # started, liveness only catches a genuinely dead process.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

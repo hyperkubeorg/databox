@@ -1,0 +1,288 @@
+/* components.css — the shared component layer every PCP app composes:
+   resets, buttons, chips, icon buttons, avatars, search fields, toasts,
+   empty states, form fields, docked panels, the app bar + switcher, and
+   the auth/launcher/settings page scaffolding. Component styles follow
+   the Slate mockup (REFERENCES/email-mockup.html). */
+
+/* ---- base ---- */
+*{box-sizing:border-box;margin:0;padding:0}
+/* color-scheme keys the UA's OWN chrome (select dropdown lists,
+   scrollbars, date pickers) to the theme — without it a dark page gets
+   light-scheme option lists: dark text/highlight on dark background. */
+:root{color-scheme:dark}
+body.light{color-scheme:light}
+/* the margin:0 reset above clobbers the UA rule that centres a modal
+   <dialog> (dialog{margin:auto}) — restore it so showModal() centres. */
+dialog:modal{margin:auto}
+html,body{height:100%}
+body{
+  font-family:var(--ui);
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  transition:background .25s ease,color .25s ease;
+}
+/* --selection is a REAL highlight (the accent tints are too faint to
+   read as selected text, especially inside light-mode inputs). */
+::selection{background:var(--selection);color:var(--text)}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.scroll{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.scroll::-webkit-scrollbar{width:9px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:20px;border:3px solid transparent;background-clip:content-box}
+kbd{font-family:var(--ui);font-size:11px;color:var(--text-dim);border:1px solid var(--border);border-radius:5px;padding:2px 7px;background:var(--surface-2)}
+.dim{color:var(--text-dim)}
+.faint{color:var(--text-faint)}
+
+/* ---- buttons ---- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:600;
+  padding:9px 16px;border-radius:var(--r-sm);transition:filter .16s,transform .12s,background .14s,border-color .14s,color .14s;
+  text-decoration:none;white-space:nowrap}
+a.btn:hover{text-decoration:none}
+.btn svg{width:15px;height:15px}
+.btn--primary{background:var(--accent);color:var(--on-accent);box-shadow:0 4px 16px -6px var(--accent-glow)}
+.btn--primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.btn--primary:active{transform:translateY(0)}
+.btn--ghost{color:var(--text-dim);border:1px solid var(--border);font-weight:500}
+.btn--ghost:hover{border-color:var(--chip-border-hover);color:var(--text);background:var(--surface-2)}
+.btn--danger{color:var(--danger);border:1px solid var(--border)}
+.btn--danger:hover{border-color:var(--danger);background:rgba(232,116,107,.08)}
+.btn.wide{width:100%}
+
+/* ---- chips ---- */
+.chip{font-size:12.5px;font-weight:500;color:var(--text-dim);padding:5px 12px;border-radius:20px;border:1px solid var(--border);transition:all .14s;white-space:nowrap}
+.chip:hover{border-color:var(--chip-border-hover);color:var(--text)}
+.chip.is-on{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+.lbl{font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:5px}
+
+/* ---- icon buttons ---- */
+.icobtn{width:32px;height:32px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--text-dim);transition:background .14s,color .14s;flex:none}
+.icobtn:hover{background:var(--surface-3);color:var(--text)}
+.icobtn svg{width:17px;height:17px}
+
+/* ---- avatars (FNV gradient supplied inline by ui.Gradient) ---- */
+.av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;flex:none;
+  font-size:12px;letter-spacing:.01em;line-height:1;user-select:none}
+.av--32{width:32px;height:32px;font-size:13px}
+.av--38{width:38px;height:38px;font-size:14px}
+.av-stack{display:flex;flex:none}
+.av-stack .av{border:2px solid var(--surface);margin-left:-11px}
+.av-stack .av:first-child{margin-left:0}
+a.av:hover{text-decoration:none;filter:brightness(1.08)}
+
+/* ---- search field ---- */
+.search{display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:0 11px;transition:border-color .16s,box-shadow .16s}
+.search:focus-within{border-color:var(--accent-dim);box-shadow:0 0 0 3px var(--accent-tint-2)}
+.search svg{width:16px;height:16px;color:var(--text-faint);flex:none}
+.search input{flex:1;background:none;border:none;color:var(--text);font-size:13.5px;padding:9px 0;outline:none}
+.search input::placeholder{color:var(--text-faint)}
+.search kbd{padding:1px 6px;color:var(--text-faint)}
+
+/* ---- toasts (with undo slot) ---- */
+.toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:9px;z-index:80;align-items:center}
+.toast{display:flex;align-items:center;gap:14px;background:var(--raise);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:11px 12px 11px 16px;box-shadow:var(--shadow);font-size:13px;
+  animation:toast-in .3s cubic-bezier(.16,1,.3,1);min-width:260px}
+.toast.out{animation:toast-out .25s ease forwards}
+.toast__msg{flex:1;color:var(--text)}
+.toast__undo{font-size:12.5px;font-weight:600;color:var(--accent);padding:5px 11px;border-radius:6px;transition:background .14s}
+.toast__undo:hover{background:var(--accent-tint)}
+@keyframes toast-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes toast-out{to{opacity:0;transform:translateY(10px) scale(.97)}}
+
+/* ---- empty state ---- */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 40px;gap:8px}
+.empty .glyph{width:74px;height:74px;border-radius:20px;background:var(--surface);border:1px solid var(--border-soft);display:grid;place-items:center;margin-bottom:8px}
+.empty .glyph svg{width:32px;height:32px;color:var(--text-faint)}
+.empty h2{font-family:var(--display);font-size:19px;font-weight:600}
+.empty p{color:var(--text-faint);font-size:14px;max-width:340px}
+.empty .hint{margin-top:14px;font-size:12.5px;color:var(--text-faint);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+
+/* ---- form fields ---- */
+.ffield{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.ffield label{font-size:12.5px;font-weight:600;color:var(--text-dim)}
+.ffield input,.ffield select,.ffield textarea{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);
+  font-size:13.5px;font-family:inherit;padding:10px 12px;outline:none;transition:border-color .16s,box-shadow .16s}
+.ffield input:focus,.ffield select:focus,.ffield textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px var(--accent-tint-2)}
+.ffield input::placeholder{color:var(--text-faint)}
+.ffield input:disabled{color:var(--text-faint);background:var(--surface-2)}
+.ffield .hint{font-size:12px;color:var(--text-faint)}
+
+/* ---- baseline form controls (any bare typed input/select/textarea gets
+   the system look; component rules like .search/.ffield/.tsel out-specify
+   this and win where they apply) ---- */
+input[type="text"],input[type="email"],input[type="password"],input[type="number"],
+input[type="date"],input[type="time"],input[type="datetime-local"],input[type="url"],
+input[type="tel"],input[type="search"],select,textarea{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);
+  font-family:inherit;font-size:13.5px;padding:9px 11px;outline:none;
+  transition:border-color .16s,box-shadow .16s;max-width:100%}
+textarea{padding:10px 12px;line-height:1.5;resize:vertical}
+input[type="text"]:focus,input[type="email"]:focus,input[type="password"]:focus,
+input[type="number"]:focus,input[type="date"]:focus,input[type="time"]:focus,
+input[type="datetime-local"]:focus,input[type="url"]:focus,input[type="tel"]:focus,
+input[type="search"]:focus,select:focus,textarea:focus{
+  border-color:var(--accent-dim);box-shadow:0 0 0 3px var(--accent-tint-2)}
+input::placeholder,textarea::placeholder{color:var(--text-faint)}
+input:disabled,select:disabled,textarea:disabled{color:var(--text-faint);background:var(--surface-2)}
+select{cursor:pointer}
+/* browsers that let CSS reach the dropdown list (Firefox, Chromium on
+   some platforms) get explicit colors; the rest follow color-scheme. */
+select option,select optgroup{background-color:var(--surface);color:var(--text)}
+input[type="checkbox"],input[type="radio"]{accent-color:var(--accent);width:auto}
+/* the pill search wraps its own input — keep it borderless inside */
+.search input,.search input[type="search"],.search input[type="text"]{background:none;border:none;padding:9px 0;box-shadow:none}
+.search input:focus{box-shadow:none;border:none}
+
+.banner{border-radius:var(--r-md);padding:10px 13px;font-size:13px;margin-bottom:14px;border:1px solid}
+.banner.error{color:var(--danger);border-color:rgba(232,116,107,.35);background:rgba(232,116,107,.08)}
+.banner.flash{color:var(--good);border-color:rgba(103,201,154,.35);background:rgba(103,201,154,.08)}
+
+/* ---- panels ---- */
+.panel{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;margin-bottom:18px}
+.panel h3{font-family:var(--display);font-size:15px;font-weight:600;margin-bottom:14px}
+.panel .sub{color:var(--text-dim);font-size:13px}
+
+/* ---- docked panel frame (the compose-style bottom-right window) ---- */
+.dock{position:fixed;right:24px;bottom:0;width:640px;max-width:calc(100vw - 48px);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg) var(--r-lg) 0 0;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;z-index:60;
+  transform:translateY(0);transition:transform .28s cubic-bezier(.16,1,.3,1);max-height:min(78vh,680px)}
+.dock.is-hidden{transform:translateY(105%);pointer-events:none}
+.dock.is-min{max-height:46px}
+.dock__bar{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;
+  background:var(--surface-3);border-radius:var(--r-lg) var(--r-lg) 0 0;cursor:pointer;flex:none}
+.dock__bar h3{font-family:var(--display);font-size:13.5px;font-weight:600;letter-spacing:.01em}
+.winbtn{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--text-dim);transition:background .14s,color .14s}
+.winbtn:hover{background:var(--raise);color:var(--text)}
+.winbtn svg{width:15px;height:15px}
+@media(max-width:660px){.dock{right:0;left:0;width:100%;max-width:100%;border-radius:0}}
+
+/* ---- brand mark (doubles as the theme toggle) ---- */
+.brand{display:flex;align-items:center;gap:11px}
+.brand__mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--accent),var(--accent-2));display:grid;place-items:center;flex:none;box-shadow:0 2px 10px -2px var(--accent-glow);cursor:pointer;transition:transform .16s ease,box-shadow .2s ease;position:relative}
+.brand__mark:hover{transform:translateY(-1px) rotate(-4deg);box-shadow:0 4px 14px -3px var(--accent-glow)}
+.brand__mark:active{transform:scale(.94)}
+.brand__mark svg{width:17px;height:17px;display:block}
+.brand__mark .brand__sun{display:none}
+body.light .brand__mark .brand__logo{display:none}
+body.light .brand__mark .brand__sun{display:block}
+.brand__name{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.02em}
+.brand__name b{color:var(--accent);font-weight:700}
+
+/* ---- app bar + switcher ---- */
+.appbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border-soft);background:var(--bg);position:relative}
+.appbar__title{font-family:var(--display);font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+a.appbar__title:hover{text-decoration:none;color:var(--text)}
+.appbar__spacer{flex:1}
+.appbar__bell{position:relative}
+.appbar__notifcount{position:absolute;top:0;right:-1px;min-width:15px;height:15px;padding:0 4px;border-radius:8px;
+  background:var(--danger);color:var(--on-accent);font-size:10px;font-weight:700;line-height:15px;text-align:center}
+.appmenu{position:absolute;top:52px;left:14px;z-index:70;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);box-shadow:var(--shadow);padding:8px;display:grid;grid-template-columns:repeat(3,86px);gap:4px}
+.appmenu[hidden]{display:none}
+.appmenu a{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 6px 10px;border-radius:var(--r-md);
+  color:var(--text-dim);font-size:12px;font-weight:500;transition:background .14s,color .14s;text-decoration:none}
+.appmenu a:hover{background:var(--surface-2);color:var(--text);text-decoration:none}
+.appmenu a.is-current{background:var(--accent-tint);color:var(--text)}
+.appmenu a svg{width:20px;height:20px;color:var(--text-faint)}
+.appmenu a.is-current svg,.appmenu a:hover svg{color:var(--accent)}
+
+/* ---- account menu (the appbar avatar) ---- */
+.appbar__avatar{cursor:pointer;border:none}
+.usermenu{position:absolute;top:52px;right:14px;z-index:70;min-width:200px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:6px}
+.usermenu[hidden]{display:none}
+.usermenu__who{display:flex;flex-direction:column;padding:8px 12px 10px;border-bottom:1px solid var(--border-soft);margin-bottom:4px;font-size:13.5px;line-height:1.35}
+.usermenu a{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-md);
+  color:var(--text);font-size:13.5px;text-decoration:none;transition:background .14s}
+.usermenu a:hover{background:var(--surface-2);text-decoration:none}
+.usermenu a svg{width:16px;height:16px;color:var(--text-dim)}
+
+/* ---- impersonation banner ---- */
+.impbanner{display:flex;align-items:center;justify-content:center;gap:14px;padding:7px 14px;font-size:12.5px;
+  background:var(--accent-tint);color:var(--text);border-bottom:1px solid var(--border)}
+.impbanner__exit{font-weight:600;color:var(--accent);padding:3px 10px;border-radius:6px}
+.impbanner__exit:hover{background:var(--accent-tint)}
+
+/* ---- page scaffolds ---- */
+.main{min-height:calc(100vh - 53px);display:flex;flex-direction:column;padding-inline:clamp(12px,2vw,26px)}
+.page{width:100%;max-width:680px;margin:0 auto;padding:28px 4px 60px}
+.page h1{font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:18px}
+
+/* ---- settings-style centered content (mail chooser/settings on the base
+   shell, where mail.css isn't loaded — keep these in the shared sheet) ---- */
+.msettings{width:100%;max-width:680px;margin:0 auto;padding:28px 4px 60px}
+.msettings .dtitle,.dtitle{font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+.msettings .sub,.dsub{color:var(--text-dim);font-size:13px;margin-bottom:14px}
+.dtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.dtable td{padding:9px 8px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
+.dtable th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:600;padding:9px 8px;border-bottom:1px solid var(--border-soft)}
+.rowacts{text-align:right}
+.inline{display:inline}
+.unread-pill{font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-tint);padding:2px 8px;border-radius:20px}
+.addrform{display:flex;flex-direction:column;gap:8px}
+.addrform .addrrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.addrform .addrrow input[type="text"]{flex:1;min-width:140px}
+.addrform .addrat{color:var(--text-faint);font-weight:600}
+
+/* ---- auth (login / signup) ---- */
+.auth{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px}
+.auth__card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:30px 28px;box-shadow:var(--shadow)}
+.auth__card .brand{margin-bottom:22px}
+.auth__card h2{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-.01em;margin-bottom:5px}
+.auth__card .sub{color:var(--text-dim);font-size:13px;margin-bottom:20px}
+.auth__switch{margin-top:18px;font-size:13px;color:var(--text-dim);text-align:center}
+.auth__agpl{margin-top:20px;text-align:center}
+.auth__agpl img{opacity:.65;transition:opacity .15s ease}
+.auth__agpl a:hover img{opacity:1}
+.auth__agpl .report{display:block;margin-top:8px;font-size:12px;color:var(--text-dim)}
+
+/* ---- launcher ---- */
+.launcher{flex:1;width:100%;max-width:880px;margin:0 auto;padding:56px 24px 40px;display:flex;flex-direction:column}
+.launcher .brand{margin-bottom:38px}
+.launcher__hello{font-family:var(--display);font-size:30px;font-weight:600;letter-spacing:-.02em;margin-bottom:28px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:var(--r-lg);padding:20px;transition:border-color .16s,background .16s,transform .14s;text-decoration:none;color:var(--text);position:relative}
+.card:hover{border-color:var(--border);background:var(--surface-2);transform:translateY(-2px);text-decoration:none}
+.card__icon{width:42px;height:42px;border-radius:12px;background:var(--accent-tint);display:grid;place-items:center}
+.card__icon svg{width:21px;height:21px;color:var(--accent)}
+.card__name{font-family:var(--display);font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card__status{font-size:12.5px;color:var(--text-faint);margin-top:-8px}
+.badge{font-size:11px;font-weight:600;color:var(--on-accent);background:var(--danger);padding:1px 7px;border-radius:20px}
+.acctfoot{margin-top:auto;padding-top:44px;display:flex;align-items:center;gap:12px}
+.acctfoot__meta{flex:1;min-width:0}
+.acctfoot__meta .name{font-size:13px;font-weight:600}
+.acctfoot__meta .dim{font-size:12px}
+
+/* ---- settings: API keys ---- */
+.pagesub{color:var(--text-dim);font-size:13.5px;margin:-8px 0 18px}
+.pagesub code,.panel .sub code{font-size:12px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:5px;padding:1px 5px}
+.panel--reveal{border-color:var(--accent-dim)}
+.tokenreveal{display:flex;align-items:center;gap:10px;margin-top:12px}
+.tokenreveal code{flex:1;min-width:0;overflow-wrap:anywhere;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;user-select:all}
+.keylist{list-style:none;display:flex;flex-direction:column;gap:14px}
+.keyrow{display:flex;align-items:flex-start;gap:14px;border-top:1px solid var(--border-soft);padding-top:14px}
+.keyrow:first-child{border-top:none;padding-top:0}
+.keyrow__main{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.keyrow__head{font-size:14px}
+.keyrow__id{font-size:11.5px;color:var(--text-faint);margin-left:6px}
+.keyrow__chips{display:flex;flex-wrap:wrap;gap:6px}
+.keyrow .hint{font-size:12px;color:var(--text-faint)}
+.scopepick{display:flex;align-items:baseline;gap:9px;font-size:13px;padding:4px 0;cursor:pointer}
+.scopepick input{accent-color:var(--accent)}
+.scopepick code{font-size:12px}
+.scopepick__desc{display:block;font-size:12px;color:var(--text-faint)}
+.backlink{font-size:13px;color:var(--text-dim)}
+.backlink:hover{color:var(--text)}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}

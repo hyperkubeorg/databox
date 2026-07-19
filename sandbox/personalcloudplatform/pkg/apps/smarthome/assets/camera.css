@@ -1,0 +1,19 @@
+/* camera.css — the Smart Home camera view (Draft 005 §7.2): player,
+   controls, and the timeline strip. */
+.sh--cam{max-width:1100px}
+.cam-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cam-head h1{margin-bottom:0}
+.cam-head #cam-live{margin-left:auto}
+.cam-head #cam-live.is-live{background:var(--danger,#e8746b);border-color:transparent;color:#fff}
+.cam-player{position:relative;background:#000;border-radius:var(--r-md,10px);overflow:hidden}
+.cam-player video{display:block;width:100%;max-height:62vh;background:#000}
+.cam-overlay{position:absolute;inset:0;display:grid;place-items:center;color:#fff;
+  background:rgba(0,0,0,.55);font-size:14px;text-align:center;padding:20px}
+.cam-controls{display:flex;align-items:center;gap:8px;margin:10px 0;flex-wrap:wrap}
+.cam-zoom{display:flex;gap:4px;margin-left:auto}
+.cam-zoom .is-on{background:var(--accent-tint)}
+.cam-timeline{position:relative;user-select:none}
+.cam-timeline canvas{display:block;width:100%;height:84px;border:1px solid var(--border);
+  border-radius:var(--r-sm,6px);background:var(--surface-2,rgba(127,127,127,.08));cursor:crosshair;touch-action:none}
+.cam-timeline img{position:absolute;bottom:92px;width:160px;border-radius:4px;
+  border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,.4);pointer-events:none;background:#000}

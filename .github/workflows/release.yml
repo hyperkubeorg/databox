@@ -1,0 +1,135 @@
+# release.yml — build and publish every deployable to ghcr.io.
+#
+# One run produces ONE UTC date-stamp version (YYYYMMDD.HHMMSS) shared by
+# all artifacts, so images and charts from the same run always match:
+#
+#   images  ghcr.io/hyperkubeorg/{databox,pcp,postoffice,cloudferry,pcp-runner,pcp-camd}
+#           tagged <stamp> and latest, linux/amd64 + linux/arm64
+#   charts  oci://ghcr.io/hyperkubeorg/charts/{databox,pcp,pcp-runner}
+#           chart version = appVersion = <stamp>  (helm accepts the stamp
+#           as-is; its lenient semver parse keeps chronological ordering)
+#
+# The S3/SQL gateways are subcommands of the databox binary and deploy from
+# the databox image — they do not get images of their own.
+
+name: release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# One release at a time, never cancelled mid-push: a half-published stamp
+# (some images present, chart missing) is worse than a queued run.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: hyperkubeorg
+
+jobs:
+  # The stamp is computed exactly once and fanned out, so every image and
+  # chart of a run carries the identical version.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      stamp: ${{ steps.stamp.outputs.stamp }}
+      date: ${{ steps.stamp.outputs.date }}
+    steps:
+      - id: stamp
+        run: |
+          now=$(date -u +%s)
+          echo "stamp=$(date -u -d "@$now" +%Y%m%d.%H%M%S)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+  images:
+    needs: version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: databox
+            dockerfile: Dockerfile
+            target: ""
+          - name: pcp
+            dockerfile: sandbox/personalcloudplatform/Dockerfile
+            target: pcp
+          - name: postoffice
+            dockerfile: sandbox/personalcloudplatform/Dockerfile
+            target: postoffice
+          - name: cloudferry
+            dockerfile: sandbox/personalcloudplatform/Dockerfile
+            target: cloudferry
+          - name: pcp-runner
+            dockerfile: sandbox/personalcloudplatform/Dockerfile
+            target: pcp-runner
+          - name: pcp-camd
+            dockerfile: sandbox/personalcloudplatform/Dockerfile
+            target: pcp-camd
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # No provenance attestation: it shows up as confusing
+          # "unknown/unknown" entries next to the two real platforms on ghcr.
+          provenance: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:${{ needs.version.outputs.stamp }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:latest
+          # Consumed by the databox Dockerfile (pkg/version stamping);
+          # ignored by the pcp Dockerfile.
+          build-args: |
+            VERSION=${{ needs.version.outputs.stamp }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ needs.version.outputs.date }}
+
+  charts:
+    # Charts publish only after every image of this stamp exists — a chart
+    # whose appVersion points at unpushed images would be broken on arrival.
+    needs: [version, images]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: helm login
+        run: |
+          echo '${{ secrets.GITHUB_TOKEN }}' | \
+            helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: package and push charts
+        run: |
+          set -euo pipefail
+          STAMP='${{ needs.version.outputs.stamp }}'
+          for chart in \
+            charts/databox \
+            sandbox/personalcloudplatform/charts/pcp \
+            sandbox/personalcloudplatform/charts/pcp-runner
+          do
+            helm package "$chart" --version "$STAMP" --app-version "$STAMP" -d dist/
+          done
+          for tgz in dist/*.tgz; do
+            helm push "$tgz" oci://${{ env.REGISTRY }}/${{ env.OWNER }}/charts
+          done

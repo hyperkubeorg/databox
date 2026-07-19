@@ -1,0 +1,177 @@
+# gateways.yaml — optional protocol gateways running on top of the
+# databox cluster: stateless Deployments (NOT part of the StatefulSet)
+# because gateways hold no data and scale by replica count independently
+# of the storage nodes — processing capacity and storage capacity are
+# separate dials. Custom gateways follow the same shape.
+#
+# The S3 gateway needs an operator identity to resolve API keys and
+# grants; it reads the root password from the chart's auth secret. The
+# SQL gateway needs none — every pg connection logs in as its own user.
+{{- if .Values.gateways.s3.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "databox.fullname" . }}-gateway-s3
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway-s3
+spec:
+  replicas: {{ .Values.gateways.s3.replicas }}
+  selector:
+    matchLabels:
+      {{- include "databox.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gateway-s3
+  template:
+    metadata:
+      labels:
+        {{- include "databox.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway-s3
+    spec:
+      containers:
+        - name: gateway-s3
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - gateway
+            - s3
+            - --cluster={{ include "databox.fullname" . }}:{{ .Values.service.port }}
+            - --listen=:9000
+            {{- if .Values.gateways.s3.tlsSecret }}
+            # Serve TLS with the operator-provided cert (tls.crt/tls.key
+            # from a kubernetes.io/tls Secret).
+            - --tls-cert=/etc/databox/gateway-tls/tls.crt
+            - --tls-key=/etc/databox/gateway-tls/tls.key
+            {{- else if .Values.gateways.s3.allowCleartext }}
+            # The gateway binary is secure-by-default and refuses to serve
+            # plaintext unless explicitly opted in. In-cluster the pod
+            # network carries the traffic and SigV4 still authenticates
+            # every request; set gateways.s3.tlsSecret to serve TLS instead.
+            - --allow-cleartext
+            {{- end }}
+          {{- if .Values.gateways.s3.tlsSecret }}
+          volumeMounts:
+            - name: gateway-tls
+              mountPath: /etc/databox/gateway-tls
+              readOnly: true
+          {{- end }}
+          env:
+            - name: DATABOX_OPERATOR_USER
+              value: root
+            - name: DATABOX_OPERATOR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "databox.secretName" . }}
+                  key: root-password
+          ports:
+            - name: s3
+              containerPort: 9000
+          resources:
+            {{- toYaml .Values.gateways.s3.resources | nindent 12 }}
+      {{- if .Values.gateways.s3.tlsSecret }}
+      volumes:
+        - name: gateway-tls
+          secret:
+            secretName: {{ .Values.gateways.s3.tlsSecret }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "databox.fullname" . }}-gateway-s3
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.gateways.s3.service.type }}
+  ports:
+    - port: 9000
+      targetPort: s3
+      name: s3
+      {{- if and (eq .Values.gateways.s3.service.type "NodePort") .Values.gateways.s3.service.nodePort }}
+      # Fixed NodePort so `make kind-up`'s host port mapping works.
+      nodePort: {{ .Values.gateways.s3.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "databox.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway-s3
+{{- end }}
+{{- if .Values.gateways.sql.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "databox.fullname" . }}-gateway-sql
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway-sql
+spec:
+  replicas: {{ .Values.gateways.sql.replicas }}
+  selector:
+    matchLabels:
+      {{- include "databox.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gateway-sql
+  template:
+    metadata:
+      labels:
+        {{- include "databox.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway-sql
+    spec:
+      containers:
+        - name: gateway-sql
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - gateway
+            - sql
+            - --cluster={{ include "databox.fullname" . }}:{{ .Values.service.port }}
+            - --listen=:5432
+            {{- if .Values.gateways.sql.tlsSecret }}
+            # Serve TLS with the operator-provided cert (tls.crt/tls.key
+            # from a kubernetes.io/tls Secret).
+            - --tls-cert=/etc/databox/gateway-tls/tls.crt
+            - --tls-key=/etc/databox/gateway-tls/tls.key
+            {{- else if .Values.gateways.sql.allowCleartext }}
+            # Without this (or a TLS cert) the gateway accepts the TCP
+            # connection but refuses every cleartext pg session — the
+            # binary is secure-by-default. In-cluster the pod network
+            # carries the traffic and password auth still applies; set
+            # gateways.sql.tlsSecret to serve TLS instead.
+            - --allow-cleartext
+            {{- end }}
+          {{- if .Values.gateways.sql.tlsSecret }}
+          volumeMounts:
+            - name: gateway-tls
+              mountPath: /etc/databox/gateway-tls
+              readOnly: true
+          {{- end }}
+          ports:
+            - name: pg
+              containerPort: 5432
+          resources:
+            {{- toYaml .Values.gateways.sql.resources | nindent 12 }}
+      {{- if .Values.gateways.sql.tlsSecret }}
+      volumes:
+        - name: gateway-tls
+          secret:
+            secretName: {{ .Values.gateways.sql.tlsSecret }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "databox.fullname" . }}-gateway-sql
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.gateways.sql.service.type }}
+  ports:
+    - port: 5432
+      targetPort: pg
+      name: pg
+      {{- if and (eq .Values.gateways.sql.service.type "NodePort") .Values.gateways.sql.service.nodePort }}
+      # Fixed NodePort so `make kind-up`'s host port mapping works.
+      nodePort: {{ .Values.gateways.sql.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "databox.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway-sql
+{{- end }}

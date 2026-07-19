@@ -1,0 +1,58 @@
+# Client-facing Service: load-balances the HTTPS API + web GUI across
+# ready storage pods. Peer traffic uses the headless Service instead.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "databox.fullname" . }}
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if .Values.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.service.sessionAffinity }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: https
+      protocol: TCP
+      name: https
+      {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+      # Fixed NodePort so `make kind-up`'s host port mapping (30443) works.
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "databox.selectorLabels" . | nindent 4 }}
+    # Storage pods only — gateway Deployments share the name/instance
+    # labels but must not receive API/GUI traffic.
+    app.kubernetes.io/component: server
+{{- if .Values.guiService.enabled }}
+---
+# Browser-facing Service: pinned to POD 0 BY SELECTOR so a browser
+# always sees the same node's self-signed certificate (accepting it
+# sticks, CLI fingerprint pinning doesn't flap). A label selector — not
+# sessionAffinity — on purpose: ClientIP affinity rides kube-proxy
+# kernel machinery (xt_recent) that bleeding-edge kernels may lack, and
+# a deterministic backend needs none of it. Separate from the main
+# Service ON PURPOSE: in-cluster API clients must keep rotating
+# backends. Dev trade-off: pod 0 down = GUI down (the API is unaffected).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "databox.fullname" . }}-gui
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.guiService.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: https
+      protocol: TCP
+      name: https
+      {{- if and (eq .Values.guiService.type "NodePort") .Values.guiService.nodePort }}
+      nodePort: {{ .Values.guiService.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "databox.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+    statefulset.kubernetes.io/pod-name: {{ include "databox.fullname" . }}-0
+{{- end }}

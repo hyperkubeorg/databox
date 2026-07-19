@@ -1,0 +1,19 @@
+pcp-runner is installed.
+
+Finish pairing (Draft 003 §6.1) — the runner paired itself on first boot
+and printed its COMPLETION code to the init-container log. Copy it back
+into the PCP admin console:
+
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "pcp-runner.fullname" . }} -c setup
+
+Paste the printed PCPBR2.… code into
+  Admin → Builds → Runners → your runner → "Complete pairing".
+
+Once completed, the runner dials PCP's buildwire endpoint
+({{ .Values.pairing.endpoint | default "the endpoint carried in the setup code" }})
+and reports active with capacity. PCP then dispatches build phases to it
+as Pods in this namespace.
+
+Watch it run:
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "pcp-runner.fullname" . }} -f
+  kubectl -n {{ .Release.Namespace }} get pods -l 'app.kubernetes.io/name!={{ include "pcp-runner.name" . }}'   # phase Pods

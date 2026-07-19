@@ -1,0 +1,73 @@
+# values.yaml — configuration for the pcp-runner chart. The runner is a
+# single in-cluster process that pairs to ONE PCP and runs build phases as
+# Pods. Authority flows PCP → runner: the concurrency cap and execution
+# profile arrive over the paired tunnel, never from here.
+
+# One runner process per pairing. Scaling the runner means pairing more
+# runners, not raising this — a runner is a single identity holding one
+# control session to PCP.
+replicaCount: 1
+
+image:
+  # Published multi-arch (amd64/arm64) by the release workflow; on kind,
+  # override with a locally built image instead.
+  repository: ghcr.io/hyperkubeorg/pcp-runner
+  # Empty string uses the chart's appVersion — which a published chart pins
+  # to its own release stamp, so chart and image always match.
+  tag: ""
+  # IfNotPresent suits kind (side-loaded images) and the immutable
+  # date-stamp tags alike.
+  pullPolicy: IfNotPresent
+
+# Pairing (Draft 003 §6.1). Paste the setup code from the PCP admin
+# console (Admin → Builds → Runners → your runner). Include the PCP
+# buildwire endpoint the runner should dial back to — either directly
+# (":4223" published as a Service/NodePort) or a cloudferry TCP relay's
+# public host:port. The runner performs `pcp-runner setup` on first boot
+# and prints its COMPLETION code to the init-container log; paste that
+# back into the admin console to finish pairing:
+#
+#   kubectl logs deploy/<release>-pcp-runner -c setup
+#
+pairing:
+  # The PCPBR1.… setup code. Stored in a Secret this chart creates.
+  setupCode: ""
+  # The PCP buildwire endpoint (host:port) the runner dials. Required if
+  # the setup code does not already carry one.
+  endpoint: ""
+  # Reference an existing Secret with a `setup-code` key instead of
+  # setting setupCode above (keeps the code out of values/Git).
+  existingSecret: ""
+
+# Persist the runner's pairing identity across restarts. The pairing
+# token is single-use, so the identity minted at first boot MUST survive a
+# reschedule — otherwise PCP no longer recognizes the runner and you must
+# re-pair. A small PVC is strongly recommended; emptyDir works only until
+# the pod is rescheduled.
+persistence:
+  enabled: true
+  size: 64Mi
+  storageClass: ""
+
+# RBAC for the k8s executor: the runner creates one Pod per build phase,
+# streams its logs, and deletes it. Namespaced to the release namespace.
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  # MUST be true — the k8s executor shells out to kubectl, which needs the
+  # mounted ServiceAccount token to talk to the API server.
+  automount: true
+  annotations: {}
+  name: ""
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+nameOverride: ""
+fullnameOverride: ""

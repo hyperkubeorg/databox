@@ -1,0 +1,29 @@
+Personal Cloud Platform is deploying.
+
+Reach it:
+
+  kubectl port-forward svc/{{ include "pcp.fullname" . }} 8080:{{ .Values.service.port }}
+  open http://localhost:8080
+
+First admin:
+{{- if .Values.adminUser }}
+  Sign up as "{{ .Values.adminUser }}" — the app promotes that account
+  to site admin (the /admin console) as soon as it exists.
+{{- else }}
+  The FIRST account to sign up becomes the site admin; set adminUser to
+  promote a specific username instead.
+{{- end }}
+
+Gateways (both run on public cloud hosts, never in this cluster, and
+never learn where this PCP lives — PCP dials out to them):
+
+  Mail:  Admin → Mail → Post offices → Add, then run
+         `postoffice setup` on the mail host.        docs/postoffice.md
+  Web:   Admin → Web access → Gateways → Add, then run
+         `cloudferry setup` on the web host.         docs/cloudferry.md
+
+Every user, file, message, and calendar event lives in the databox
+cluster at {{ .Values.databox.endpoint }} under /pcp/ (file and mail
+bytes are databox blobs) — inspect the records live:
+
+  databox console -e 'list /pcp/users/'

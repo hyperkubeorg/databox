@@ -1,0 +1,76 @@
+# kind.yaml — local 5-node Kubernetes cluster for databox development
+# (§21.3). Used exclusively by `make kind-up` / `make
+# kind-down`. Five nodes (1 control-plane + 4 workers) give the Helm
+# chart's default 3-replica StatefulSet room to reschedule during node
+# failure/chaos testing while keeping Raft quorum.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: databox
+networking:
+  # iptables mode ON PURPOSE, pinned so behavior can't drift with kind/
+  # Kubernetes releases: it is the only kube-proxy mode that can serve
+  # NodePorts on the node's LOOPBACK, and rootless podman's rootlessport
+  # publishes the extraPortMappings below by dialing the NodePort on
+  # loopback from inside the node. nftables/ipvs modes never serve
+  # localhost NodePorts — under rootless podman every published port
+  # would accept connections and reset them. This is CLUSTER config the
+  # repo ships; it requires zero podman/docker configuration from the
+  # developer and behaves identically under rootful and rootless
+  # docker/podman.
+  kubeProxyMode: "iptables"
+kubeadmConfigPatches:
+  # Serve NodePorts on ALL node addresses including 127.0.0.1 (recent
+  # kube-proxy defaults exclude loopback) — same reason as above.
+  - |
+    kind: KubeProxyConfiguration
+    nodePortAddresses: []
+    iptables:
+      localhostNodePorts: true
+nodes:
+  - role: control-plane
+    # Port mappings publish in-cluster NodePorts on the developer's host,
+    # LOOPBACK-ONLY (listenAddress 127.0.0.1): a dev cluster must not be
+    # reachable from the LAN. Without it the runtime binds the wildcard.
+    # A Service of type NodePort on 30443 becomes reachable at both
+    # https://localhost:8443 (convenience alias) and https://localhost:30443.
+    extraPortMappings:
+      # Host 8443 → NodePort 30443: lets tools default to the standard
+      # databox port without remembering the NodePort number.
+      - containerPort: 30443
+        hostPort: 8443
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      # The NodePort itself, unaliased.
+      - containerPort: 30443
+        hostPort: 30443
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      # The personalcloudplatform (pcp) example app's NodePort:
+      # 30081 → http://localhost:30081.
+      - containerPort: 30081
+        hostPort: 30081
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      # The pcp git-over-SSH NodePort: 30422 → localhost:30422.
+      # `make relay-ssh` serves it on the friendly port 4222.
+      - containerPort: 30422
+        hostPort: 30422
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      # The protocol gateways' NodePorts (databox gateway s3|sql).
+      # `make port-forward-s3` / `-sql` relay the friendly ports
+      # (9000, 5432) to these.
+      - containerPort: 30900
+        hostPort: 30900
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30432
+        hostPort: 30432
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+  # Four schedulable workers: enough to run 3 databox replicas on distinct
+  # nodes plus one spare to exercise decommission / rescheduling locally.
+  - role: worker
+  - role: worker
+  - role: worker
+  - role: worker

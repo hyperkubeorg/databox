@@ -1,0 +1,12 @@
+{
+  "name": "databoxjs",
+  "version": "0.1.0",
+  "description": "JavaScript client for the databox database (Bun runtime)",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "smoke": "bun tests/smoke.js"
+  }
+}

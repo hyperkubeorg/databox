@@ -1,0 +1,216 @@
+# Default values for the databox chart.
+#
+# The chart deploys a databox storage cluster as a StatefulSet:
+#   - pod 0 bootstraps a new cluster (unless its volume already holds one),
+#   - pods 1..N-1 fetch a join token from pod 0 and join automatically,
+#   - a generated Secret holds the root password and the node PSK; it is
+#     created once and NEVER rotated by upgrades (Helm `lookup` reuse).
+
+# Number of storage nodes. 3 is the smallest fault-tolerant Raft cluster
+# (survives 1 node failure). Use odd numbers; scaling up joins new pods
+# automatically, scaling down requires `databox cluster decommission` FIRST
+# (see docs/admin/kubernetes.md).
+replicaCount: 3
+
+image:
+  # Container image containing the databox binary. The release workflow
+  # publishes it multi-arch (amd64/arm64); `make kind-up` overrides this
+  # with a locally built localhost/databox:dev.
+  repository: ghcr.io/hyperkubeorg/databox
+  # Image pull policy. IfNotPresent plays well with side-loaded local
+  # images (kind) and with the immutable date-stamp tags; only a pinned
+  # `latest` can go stale under it.
+  pullPolicy: IfNotPresent
+  # Image tag. Empty string uses the chart's appVersion — which a published
+  # chart pins to its own release stamp, so chart and image always match.
+  tag: ""
+
+# Pull secrets for private registries, e.g. [{name: my-registry-cred}].
+imagePullSecrets: []
+
+# Override the chart name ("databox") used in resource names.
+nameOverride: ""
+# Override the full resource name prefix ("<release>-databox") entirely.
+fullnameOverride: ""
+
+# Kubernetes cluster DNS domain — part of each pod's stable advertise
+# address (<pod>.<headless-svc>.<ns>.svc.<clusterDomain>). Change only if
+# your cluster uses a non-default domain.
+clusterDomain: cluster.local
+
+# Persistent storage for each node: PebbleDB (KV + Raft logs) and blob
+# chunks share one volume mounted at /var/lib/databox.
+storage:
+  # Size of each node's PersistentVolumeClaim. Size for your data plus
+  # blob chunks; shards split at 16 GiB by default, so multi-shard nodes
+  # want more than that. Cannot be shrunk later.
+  size: 10Gi
+  # StorageClass for the claims. Empty string uses the cluster default.
+  className: ""
+
+serviceAccount:
+  # Create a dedicated ServiceAccount for the pods. Databox itself needs
+  # no Kubernetes API access; a dedicated account just keeps identity tidy.
+  create: true
+  # Databox never talks to the Kubernetes API — don't mount a token.
+  automount: false
+  # Extra annotations for the ServiceAccount (e.g. IAM role bindings).
+  annotations: {}
+  # Use an existing ServiceAccount instead (when create is false).
+  name: ""
+
+# Client-facing Service (the headless peer-discovery Service is separate
+# and not configurable — it must exist for StatefulSet DNS).
+service:
+  # ClusterIP for in-cluster clients; NodePort/LoadBalancer to expose the
+  # HTTPS API + GUI outside. `make kind-up` overrides this to NodePort
+  # with nodePort=30443, matching kind.yaml's host port mappings.
+  type: ClusterIP
+  # Service port. Databox serves API, GUI, and internal RPC on one HTTPS
+  # port; 8443 is the binary's default.
+  port: 8443
+  # Fixed NodePort (only used when type is NodePort). 30443 matches the
+  # kind.yaml host port mapping. Empty string lets Kubernetes pick.
+  nodePort: ""
+  # Session affinity for the MAIN service — leave empty. In-cluster API
+  # clients retry across backends, and pinning them to one pod turns a
+  # single slow node into a permanent outage for its pinned clients
+  # (login writes go through Raft; a settling node can stall them).
+  # Browsers get stickiness from guiService below instead.
+  sessionAffinity: ""
+
+# A separate browser-facing Service for the web GUI (and host-side CLI),
+# pinned to pod 0 by label selector. Each node serves its OWN
+# self-signed certificate, so a rotating Service means a browser can
+# never durably accept the cert (every other connection presents a
+# different one) and CLI fingerprint pinning flaps; one deterministic
+# backend fixes that with no sessionAffinity kernel machinery. Kept OFF
+# the main service so API clients keep rotating freely. `make kind-up`
+# enables this on NodePort 30443 (kind.yaml's host mapping).
+guiService:
+  enabled: false
+  type: NodePort
+  nodePort: 30443
+
+# Ingress for the HTTPS API/GUI — disabled by default. Databox speaks TLS
+# itself, so the ingress must pass TLS through or re-encrypt to the backend
+# (e.g. nginx: nginx.ingress.kubernetes.io/backend-protocol: "HTTPS").
+ingress:
+  enabled: false
+  # IngressClass name (e.g. nginx). Empty uses the cluster default.
+  className: ""
+  # Controller-specific annotations, e.g. backend-protocol HTTPS.
+  annotations: {}
+  hosts:
+    - host: databox.example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  # TLS section for ingress-terminated certificates (optional).
+  tls: []
+
+# Gateway API HTTPRoute alternative to Ingress — also disabled by default.
+# Requires Gateway API CRDs and a controller in the cluster.
+httpRoute:
+  enabled: false
+  # HTTPRoute annotations.
+  annotations: {}
+  # Gateways to attach to.
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  # Hostnames matched against the HTTP Host header.
+  hostnames:
+    - databox.example.local
+  # Routing rules; the chart appends the databox Service as the backend.
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+# Compute resources per storage pod. Left empty by default so the chart
+# runs on small dev clusters; set real requests/limits in production.
+resources: {}
+  # requests:
+  #   cpu: 500m
+  #   memory: 1Gi
+  # limits:
+  #   memory: 4Gi
+
+# Extra annotations/labels on the pods.
+podAnnotations: {}
+podLabels: {}
+
+# Additional environment variables for the storage-node containers, as
+# plain {name, value} pairs. Databox reads DATABOX_* env as configuration
+# (precedence: flags > env > file > defaults) — use this for the security
+# and MVCC tunables, e.g.:
+#   - name: DATABOX_PSK_EXTRA_GRACE        # rotation-key grace (§6.2), default 720h
+#     value: "720h"
+#   - name: DATABOX_INTERNAL_CLIENT_CERTS  # peer mTLS: require|off (§6.1)
+#     value: "require"
+#   - name: DATABOX_MVCC_HISTORY_REVS      # MUST be identical on all nodes
+#     value: "4096"
+#   - name: DATABOX_MVCC_GC_INTERVAL       # MUST be identical on all nodes
+#     value: "512"
+extraEnv: []
+
+# Pod-level security context. fsGroup 1000 makes the mounted data volume
+# writable by the image's non-root `databox` user (UID 1000).
+podSecurityContext:
+  fsGroup: 1000
+
+# Container-level security context. The image already runs as UID 1000;
+# these settings make that explicit and drop everything else.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# Standard scheduling controls. In production add a topologySpreadConstraint
+# or anti-affinity so replicas land on distinct nodes/zones.
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Protocol gateways (§13/§14): stateless Deployments running
+# `databox gateway s3|sql` against this cluster. Disabled by default;
+# `make kind-up` enables one replica of each. Scale gateway replicas
+# independently of the storage nodes — processing and storage are
+# separate dials, and custom gateways follow the same pattern.
+gateways:
+  s3:
+    enabled: false
+    replicas: 1
+    # Gateway listeners are secure-by-default: without a TLS cert they
+    # refuse to serve. Either point tlsSecret at a kubernetes.io/tls
+    # Secret (tls.crt/tls.key) to serve TLS, or leave allowCleartext true
+    # to serve plaintext inside the cluster network (requests are still
+    # SigV4-authenticated; put TLS at the Ingress/Gateway if exposing).
+    tlsSecret: ""
+    allowCleartext: true
+    # Same shape as the top-level service: NodePort + a fixed nodePort
+    # lets kind publish the gateway on the developer's host.
+    service:
+      type: ClusterIP
+      nodePort: ""
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {memory: 256Mi}
+  sql:
+    enabled: false
+    replicas: 1
+    # Same trade-off as the S3 gateway: tlsSecret serves TLS to pg
+    # clients; allowCleartext permits plaintext pg sessions in-cluster
+    # (password auth still applies).
+    tlsSecret: ""
+    allowCleartext: true
+    service:
+      type: ClusterIP
+      nodePort: ""
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {memory: 256Mi}

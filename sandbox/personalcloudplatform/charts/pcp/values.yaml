@@ -1,0 +1,114 @@
+# values.yaml — configuration for the Personal Cloud Platform chart.
+# The app is stateless (every record lives in databox), so this chart is
+# just a Deployment + Service; scale it freely with replicaCount. The
+# postoffice and cloudferry gateways are NOT deployed here — they run on
+# public cloud hosts and pair from the admin console (docs/postoffice.md,
+# docs/cloudferry.md).
+
+# How many app instances to run. Any instance serves any request —
+# sessions live in databox — and the background loops (mail, media,
+# health, gateway sync) elect one sweeper per pass with databox locks.
+replicaCount: 2
+
+image:
+  # Published multi-arch (amd64/arm64) by the release workflow; `make
+  # kind-up` overrides this with a locally built localhost/pcp:dev.
+  repository: ghcr.io/hyperkubeorg/pcp
+  # Empty string uses the chart's appVersion — which a published chart pins
+  # to its own release stamp, so chart and image always match.
+  tag: ""
+  # IfNotPresent is required on kind (the image is side-loaded, not
+  # pullable) and correct for the immutable date-stamp tags.
+  pullPolicy: IfNotPresent
+
+# Where the app finds its databox cluster and how it authenticates.
+databox:
+  # In-cluster DNS name of the databox client service + port.
+  endpoint: "databox:8443"
+  # The databox user the app logs in as. The demo uses root and reads the
+  # password straight from the databox chart's generated secret; a real
+  # deployment creates a scoped user instead:
+  #   databox user create pcp
+  #   databox grant add pcp allow /pcp list,read,write,delete
+  # (plus `allow /.databox list,read` for the admin Databox panel), then
+  # points existingSecret at that user's credential.
+  user: root
+  # Secret + key holding the databox password. Defaults to the databox
+  # chart's generated auth secret in the same namespace ("<release>-auth").
+  existingSecret: databox-auth
+  existingSecretKey: root-password
+
+# Username to bootstrap as site admin (PCP_ADMIN). Set it, sign that
+# account up normally, and the app promotes it to admin as soon as it
+# exists. Empty = the FIRST account to sign up becomes the admin.
+adminUser: ""
+
+# Initial signup mode on a FRESH deploy (PCP_SIGNUP_MODE) — an admin's
+# saved choice always wins afterwards. One of: open, invite,
+# trusted-invite, admin-invite. Empty keeps the app default (open).
+signupMode: ""
+
+# Per-user default quota in bytes when no tier/override applies
+# (PCP_DEFAULT_QUOTA). Empty keeps the app default (10 GiB); "0" means
+# unlimited.
+defaultQuota: ""
+
+# Max single upload request body in bytes (PCP_MAX_UPLOAD). Empty keeps
+# the app default (5 GiB).
+maxUpload: ""
+
+# Extra environment (name → value), e.g. TRUST_PROXY_HEADERS: "1" when a
+# trusted reverse proxy fronts the Service.
+extraEnv: {}
+
+service:
+  # NodePort so the repo's kind host mapping (localhost:30081) reaches
+  # the app directly; a public deployment fronts this with an Ingress
+  # (or a paired cloudferry) and uses ClusterIP.
+  type: NodePort
+  port: 8080
+  nodePort: 30081
+
+# Git-over-SSH (PCP_GIT_SSH_ADDR). Enabled by default on the 4222
+# convention; the kind host mapping publishes NodePort 30422 and
+# `make relay-ssh` serves it at localhost:4222. A public deployment
+# exposes it through a cloudferry TCP relay (edge 22 → local 4222,
+# docs/cloudferry.md) instead of the NodePort. enabled=false sets
+# PCP_GIT_SSH_ADDR empty, turning the transport off.
+gitSSH:
+  enabled: true
+  port: 4222
+  # NodePort published alongside the web port (only meaningful while
+  # service.type is NodePort).
+  nodePort: 30422
+
+# Public exposure via a cluster Ingress (TLS terminates at the edge).
+# Most installs skip this entirely and publish through a paired
+# cloudferry instead — zero inbound connections to this network.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: pcp.example.org
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    memory: 512Mi
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+# Stock helm-create knobs kept because _helpers.tpl references them.
+nameOverride: ""
+fullnameOverride: ""

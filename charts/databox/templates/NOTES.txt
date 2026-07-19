@@ -1,0 +1,37 @@
+databox {{ .Chart.AppVersion }} installed as release "{{ .Release.Name }}".
+
+Pod 0 bootstraps the cluster; the other {{ sub (int .Values.replicaCount) 1 }} pod(s) join it
+automatically. The root password and node PSK were generated into the
+Secret "{{ include "databox.secretName" . }}" on first install and are never
+rotated by upgrades.
+
+1. Get the root password:
+
+   kubectl get secret {{ include "databox.secretName" . }} -n {{ .Release.Namespace }} \
+     -o jsonpath='{.data.root-password}' | base64 -d; echo
+
+2. Reach the API + web GUI (port-forward):
+
+   kubectl port-forward svc/{{ include "databox.fullname" . }} -n {{ .Release.Namespace }} 8443:{{ .Values.service.port }}
+
+   (Fine for the GUI/console; kubectl port-forward can wedge under
+   sustained blob transfers. On the `make kind-up` cluster
+   https://localhost:30443 serves directly, and the optional
+   `make relay` is a raw TCP relay on localhost:8080 — see
+   docs/admin/kindrelay.md.)
+
+   Then open https://localhost:8443/ and log in as "root" with the
+   password from step 1. (The cluster-issued certificate is not in your
+   browser's trust store; accept the fingerprint prompt.)
+
+3. Use the CLI against the forwarded port:
+
+   databox console --endpoint localhost:8443 --user root
+
+4. Check cluster health:
+
+   databox cluster status --endpoint localhost:8443 --user root
+
+Tuning: set DATABOX_* configuration on the storage pods via the extraEnv
+value; enable the stateless S3/SQL gateways with gateways.s3.enabled /
+gateways.sql.enabled. See docs/admin/kubernetes.md.

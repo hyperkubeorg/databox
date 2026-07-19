@@ -1,0 +1,18 @@
+apiVersion: v2
+name: databox
+description: >-
+  Databox — distributed key-value & blob storage. Deploys a Raft-replicated
+  storage cluster as a StatefulSet with automatic bootstrap/join, a generated
+  root password + node PSK secret, and HTTPS probes.
+type: application
+
+# Chart version. The release workflow overrides this at package time with
+# the run's UTC date stamp (YYYYMMDD.HHMMSS) — the value here only applies
+# to installs straight from a git checkout.
+version: 0.1.0
+
+# The image tag deployed when .Values.image.tag is empty. The release
+# workflow overrides this with the same date stamp as the chart version, so
+# a published chart always deploys its matching image; a git checkout
+# deploys latest.
+appVersion: "latest"

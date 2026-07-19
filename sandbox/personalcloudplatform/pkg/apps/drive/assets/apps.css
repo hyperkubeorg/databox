@@ -1,0 +1,347 @@
+/* apps.css — the editor/viewer chrome for the app host (app_host.tpl):
+   PCD's editor styles ported onto the Slate design system. Palette and
+   radii come from /static/tokens.css; only --mono (a monospace stack
+   the design system doesn't carry) is defined here. Sections: shared
+   rows/menu/modal/buttons, then per-app: grid, writer, markdown,
+   music, kanban, draw. */
+
+:root{--mono:ui-monospace,'Cascadia Code','Source Code Pro',Menlo,Consolas,monospace}
+
+/* shared bits the app shell + editors expect */
+.apphost__bar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.apphost__title{margin:0;flex:1;overflow-wrap:anywhere;font-size:18px;font-family:var(--display)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--text-faint)}
+.inline{display:inline}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border-radius:var(--r-md);border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);font:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:none}
+/* toggled state — active tool/setting buttons across every editor */
+.btn.np-on{background:var(--accent-tint);color:var(--accent);border-color:var(--accent)}
+.btn.np-on:hover{background:var(--accent-tint)}
+/* armed destructive button — first click landed, one more fires it */
+.confirm-armed,.confirm-armed:hover{background:var(--danger)!important;border-color:var(--danger)!important;color:#fff!important}
+.rows{display:flex;flex-direction:column}
+.rows .row{display:grid;grid-template-columns:minmax(0,1fr) 110px 90px 130px;align-items:center;gap:12px;
+  padding:8px 12px;border-radius:9px;border:1px solid transparent;user-select:none;-webkit-user-select:none;font-size:14px}
+.rows .row:hover{background:var(--surface-2)}
+.rows .row.selected{background:var(--accent-tint);border-color:var(--accent)}
+.rows .row.droptarget{outline:2px dashed var(--accent)}
+.rows .rname{display:flex;align-items:center;gap:10px;min-width:0;font-weight:600;pointer-events:none}
+.rows .rname svg{flex:none;width:20px;height:20px}
+.rows .rname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .rmeta{color:var(--text-faint);font-size:12.5px;pointer-events:none;white-space:nowrap}
+.rows .rhead{color:var(--text-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;border-bottom:1px solid var(--border);border-radius:0}
+.rows .rhead:hover{background:none}
+
+/* ============ 7. CONTEXT MENU ============ */
+.cmenu{position:fixed;z-index:80;min-width:210px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none}
+.cmenu.open{display:block}
+.cmenu button,.cmenu a{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 12px;
+  border:0;background:none;color:var(--text);font:inherit;font-size:14px;font-weight:500;border-radius:8px;cursor:pointer}
+.cmenu button:hover,.cmenu a:hover{background:var(--accent-tint);text-decoration:none}
+.cmenu button.danger:hover{background:rgba(242,109,120,.14);color:var(--danger)}
+.cmenu .cm-sep{height:1px;background:var(--border);margin:5px 8px}
+.cmenu svg{width:17px;height:17px;color:var(--text-dim);flex:none}
+
+/* ============ 8. MODALS / PANELS ============ */
+dialog.modal{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--shadow);padding:22px;width:min(440px,92vw)}
+dialog.modal::backdrop{background:rgba(8,10,18,.6)}
+dialog.modal h3{margin-bottom:12px;font-size:16px}
+/* .panel and .card come from components.css — not redefined here */
+
+/* revision-preview banner (app host) */
+.revbanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding:9px 14px;
+  border-radius:10px;border:1px solid rgba(240,166,107,.45);background:rgba(240,166,107,.1);
+  color:var(--text);font-size:13.5px}
+
+/* ============ 12b. GRID (native spreadsheets) ============ */
+.grid-toolbar{display:flex;align-items:center;gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.grid-toolbar .gtb{padding:5px 10px;min-width:34px;justify-content:center}
+.grid-toolbar input[type=color]{width:30px;height:30px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer}
+.grid-toolbar select{padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px}
+.grid-fxbar{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border)}
+.grid-fxbar span{min-width:44px;text-align:center;background:var(--surface-2);border-radius:6px;padding:3px 6px;font-size:12.5px}
+.grid-fxbar input{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 10px;font-size:13px}
+.grid-scroll{flex:1;overflow:auto;min-height:340px}
+/* fixed layout: content NEVER widens a column — the colgroup (fed by
+   the cw ops) is the single source of column width */
+.grid-table{border-collapse:collapse;font-size:13px;table-layout:fixed;width:max-content}
+.grid-table th{position:sticky;background:var(--surface-2);color:var(--text-faint);font-weight:600;font-size:11.5px;
+  border:1px solid var(--border);padding:3px 8px;z-index:2;min-width:34px}
+.grid-table tr th{left:0}
+.grid-table tr:first-child th{top:0;z-index:3}
+.gcol-resize{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:4;border-radius:2px}
+.gcol-resize:hover{background:var(--accent);opacity:.55}
+.grid-table td{border:1px solid var(--border);padding:3px 8px;height:24px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:cell;user-select:none;-webkit-user-select:none}
+.grid-table td.gsel{outline:1px solid var(--accent);outline-offset:-1px;background:var(--accent-tint) !important}
+.grid-table td.gfocus{outline:2px solid var(--accent);outline-offset:-2px}
+/* Editing must not disturb the column: the td keeps its box (padding
+   moves onto the input, width is pinned to what the cell measured). */
+.grid-table td.gediting{padding:0}
+.grid-table td .gedit{display:block;width:100%;height:100%;box-sizing:border-box;border:0;
+  background:var(--surface);color:var(--text);font:inherit;outline:none;padding:3px 8px;margin:0}
+.grid-tabs{display:flex;gap:3px;padding:7px 10px;border-top:1px solid var(--border);flex-wrap:wrap}
+.gtab{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text-dim);border-radius:8px 8px 0 0;padding:5px 10px 5px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.gtab:hover{background:var(--surface-3);color:var(--text)}
+.gtab.active{background:var(--accent-tint);color:var(--accent);border-color:var(--accent)}
+.gtab-add{border-radius:8px;min-width:32px;justify-content:center;padding:5px 10px}
+.gtab .gtab-menu{opacity:.5;font-size:11px;padding:0 2px;border-radius:4px}
+.gtab:hover .gtab-menu,.gtab.active .gtab-menu{opacity:1}
+.gtab .gtab-menu:hover{background:var(--surface)}
+.gtab input{border:1px solid var(--accent);background:var(--surface);color:var(--text);font:inherit;
+  border-radius:5px;padding:1px 6px;width:110px;outline:none}
+/* the spreadsheet manual modal */
+dialog.gman{width:min(680px,92vw);max-height:84vh;overflow:auto}
+.gman-body{font-size:13.5px;line-height:1.55;color:var(--text-dim)}
+.gman-body h4{margin:16px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint)}
+.gman-body p{margin:0 0 8px}
+.gman-body kbd{background:var(--surface-2);border:1px solid var(--border);border-bottom-width:2px;
+  border-radius:5px;padding:0 5px;font-family:var(--mono);font-size:12px}
+.gman-t{border-collapse:collapse;width:100%;margin:4px 0 8px}
+.gman-t td{border-top:1px solid var(--border);padding:4px 10px 4px 0;vertical-align:top;font-size:13px}
+.gman-t td:first-child{white-space:nowrap;color:var(--text)}
+
+/* ============ 12c. WRITER (document editor) ============ */
+.writer-scroll{flex:1;overflow:auto;background:var(--bg);padding:18px 12px}
+.writer-page{margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:4px;
+  box-shadow:var(--shadow);font-size:15.5px;line-height:1.65;color:var(--text);display:flex;flex-direction:column}
+.writer-body{outline:none;flex:1}
+.writer-hf{outline:none;color:var(--text-faint);font-size:13px;min-height:1.4em}
+.writer-header{border-bottom:1px dashed var(--border)}
+.writer-footer{border-top:1px dashed var(--border)}
+.writer-hf:empty::before{content:attr(data-placeholder);opacity:.45;pointer-events:none}
+.writer-ruler{overflow:hidden;background:var(--surface);border-bottom:1px solid var(--border);height:26px;padding:0 12px}
+.ruler-inner{position:relative;height:26px;margin:0 auto;background:var(--surface-2);border-radius:0 0 4px 4px}
+.ruler-tick{position:absolute;bottom:0;width:1px;height:6px;background:var(--text-faint);opacity:.6}
+.ruler-tick.major{height:11px;opacity:.9}
+.ruler-tick.major::after{content:attr(data-n);position:absolute;bottom:11px;left:2px;font-size:9px;color:var(--text-faint)}
+.ruler-margin{position:absolute;top:0;bottom:0;background:var(--border);opacity:.5}
+.ruler-handle{position:absolute;top:0;width:0;height:0;border-left:6px solid transparent;
+  border-right:6px solid transparent;border-top:9px solid var(--accent);margin-left:-6px;margin-right:-6px;cursor:ew-resize;z-index:2}
+.writer-page h1{font-size:28px;margin:20px 0 10px}
+.writer-page h2{font-size:22px;margin:18px 0 8px}
+.writer-page h3{font-size:17px;margin:14px 0 6px}
+.writer-page p{margin:0 0 10px}
+.writer-page blockquote{border-left:3px solid var(--border);margin:10px 0;padding:2px 0 2px 16px;color:var(--text-dim)}
+.writer-page pre{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:12px;font-family:var(--mono);font-size:13px;overflow:auto;white-space:pre-wrap}
+.writer-page ul,.writer-page ol{margin:0 0 10px;padding-left:26px}
+.writer-page a{color:var(--accent);text-decoration:underline}
+.writer-page hr{border:0;border-top:1px solid var(--border);margin:18px 0}
+.writer-page hr.pb{border-top:2px dashed var(--border);margin:12px 0;position:relative}
+.writer-page hr.pb::after{content:'page break';position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+  background:var(--surface);padding:0 8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+/* pagination gap: fills out the page, then footer / paper band / next header */
+.writer-pgap{user-select:none;pointer-events:none}
+.writer-pgap .pgap-hf{display:flex;align-items:flex-end;gap:10px;color:var(--text-faint);font-size:13px;min-height:1.4em}
+.writer-pgap .pgap-cnt{flex:1;min-width:0}
+.writer-pgap .pgap-num{font-size:11px;opacity:.7}
+.writer-pgap .pgap-foot{border-top:1px dashed var(--border)}
+.writer-pgap .pgap-head{border-bottom:1px dashed var(--border)}
+.writer-pgap .pgap-band{height:24px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  box-shadow:inset 0 6px 10px -8px rgba(0,0,0,.55),inset 0 -6px 10px -8px rgba(0,0,0,.55)}
+.writer-status{display:flex;gap:10px;align-items:center;padding:7px 14px;border-top:1px solid var(--border);font-size:12.5px}
+@media (max-width:900px){.writer-page{padding:28px 22px}}
+
+/* ============ 12c². MARKDOWN (source editor) ============ */
+.md-scroll{flex:1;overflow:auto;background:var(--bg);padding:18px}
+.md-wrapper{position:relative;min-height:100%}
+.md-surface{outline:none;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:var(--text);
+  white-space:pre-wrap;overflow-wrap:break-word;min-height:60vh;padding-right:76px}
+.md-surface.md-nowrap{white-space:pre;overflow-wrap:normal;width:max-content;min-width:100%}
+.mdline{min-height:1.7em;border-radius:6px}
+.md-mark{color:var(--text-faint);opacity:.65}
+.md-b{font-weight:800}
+.md-i{font-style:italic}
+.md-s{text-decoration:line-through;opacity:.75}
+.md-codei{background:var(--surface-2);border-radius:4px;padding:0 3px;color:#3ECF8E}
+.md-link{color:var(--accent);text-decoration:underline}
+.md-link[data-href]{cursor:pointer}
+.md-link[data-href]:hover{color:var(--text);background:var(--accent-tint);border-radius:3px}
+.md-url{color:var(--text-faint);opacity:.8}
+.md-bullet{color:var(--accent);font-weight:700}
+.md-quote{border-left:3px solid var(--border);padding-left:10px;color:var(--text-dim)}
+.md-hrline{color:var(--text-faint);letter-spacing:2px}
+/* headings: the marker stays visible; neon mode adds the highlighter
+   block — a distinct contrasting color per depth */
+.md-h1{font-size:1.7em;font-weight:800;margin:10px 0 4px}
+.md-h2{font-size:1.45em;font-weight:800;margin:8px 0 3px}
+.md-h3{font-size:1.25em;font-weight:700;margin:7px 0 2px}
+.md-h4{font-size:1.1em;font-weight:700;margin:6px 0 2px}
+.md-h5{font-size:1em;font-weight:700;margin:5px 0 2px}
+.md-h6{font-size:.95em;font-weight:700;margin:5px 0 2px}
+/* width:fit-content, NOT inline-block: the highlight hugs the text but
+   the line stays block-level — inline-block let consecutive headings
+   flow onto the same visual line */
+.md-neon .md-h1,.md-neon .md-h2,.md-neon .md-h3,.md-neon .md-h4,.md-neon .md-h5,.md-neon .md-h6{
+  width:fit-content;max-width:100%;padding:2px 12px 2px 8px;border-radius:4px 14px 14px 4px}
+.md-neon .md-h1{background:rgba(255,45,150,.22);color:#FF6EB4;box-shadow:-4px 0 0 #FF2D96}
+.md-neon .md-h2{background:rgba(0,229,255,.16);color:#4DE8FF;box-shadow:-4px 0 0 #00E5FF}
+.md-neon .md-h3{background:rgba(57,255,20,.13);color:#7CFF5E;box-shadow:-4px 0 0 #39FF14}
+.md-neon .md-h4{background:rgba(255,159,28,.16);color:#FFB454;box-shadow:-4px 0 0 #FF9F1C}
+.md-neon .md-h5{background:rgba(191,90,242,.18);color:#D49CFF;box-shadow:-4px 0 0 #BF5AF2}
+.md-neon .md-h6{background:rgba(250,240,66,.14);color:#F5E663;box-shadow:-4px 0 0 #FAF042}
+/* fenced code */
+.md-fence{background:var(--surface-2);border:1px solid var(--border);border-bottom:0;border-radius:8px 8px 0 0;
+  padding:2px 10px;color:var(--text-faint)}
+.md-fence+.md-fence,.md-code+.md-fence{border-radius:0 0 8px 8px;border-top:0;border-bottom:1px solid var(--border)}
+.md-lang{color:#4DE8FF;font-size:.9em}
+.md-code{background:var(--surface-2);border-left:1px solid var(--border);border-right:1px solid var(--border);
+  padding:0 10px;border-radius:0}
+.tok-com{color:#7a8194;font-style:italic}
+.tok-str{color:#3ECF8E}
+.tok-num{color:#F0A66B}
+.tok-kw{color:#5B8CFF;font-weight:600}
+.md-copylayer{position:absolute;inset:0;pointer-events:none}
+/* positioned via inline left/top ONLY — left + a stylesheet right would
+   stretch the button between the two */
+.md-copybtn{position:absolute;pointer-events:auto;white-space:nowrap;border:1px solid var(--border);
+  background:var(--surface-3);color:var(--text-dim);font:inherit;font-size:11.5px;padding:2px 10px;
+  border-radius:7px;cursor:pointer;opacity:.75}
+.md-copybtn:hover{opacity:1;color:var(--text);border-color:var(--accent)}
+.md-widthin{width:64px;padding:5px 6px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);font:inherit;font-size:13px}
+.md-widthin:disabled{opacity:.4}
+/* line numbers: CSS counters via ::before — pseudo-elements never enter
+   the DOM, so editing, copy, and the line diff are untouched */
+.md-surface.md-nums{counter-reset:mdln;padding-left:52px}
+.md-surface.md-nums .mdline{counter-increment:mdln;position:relative}
+.md-surface.md-nums .mdline::before{content:counter(mdln);position:absolute;left:-50px;width:38px;
+  text-align:right;color:var(--text-faint);opacity:.5;font-size:11px;line-height:inherit;
+  user-select:none;pointer-events:none}
+
+
+/* ============ 12e. MUSIC PLAYER ============ */
+.np-panel{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.np-art{width:72px;height:72px;flex:none;border-radius:10px;background:var(--surface-2);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text-faint)}
+.np-art img{width:100%;height:100%;object-fit:cover}
+.np-info{flex:1;min-width:0}
+.np-info b{display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-controls{display:flex;gap:4px}
+.np-controls .np-on{background:var(--accent-tint);color:var(--accent)}
+
+/* ============ 12f. KANBAN (board editor) ============ */
+.kan-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.kan-filter{width:min(320px,40%);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);padding:6px 10px;font:inherit;font-size:13px;outline:none}
+.kan-filter:focus{border-color:var(--accent)}
+.kan-seg{border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);border-radius:8px;
+  padding:5px 10px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.kan-seg:hover{background:var(--surface-3);color:var(--text)}
+.kan-seg.active{background:var(--accent-tint);color:var(--accent);border-color:var(--accent)}
+.kan-status,.kan-who{font-size:12.5px;color:var(--text-faint);white-space:nowrap}
+.kan-main{flex:1;display:flex;min-height:0}
+.kan-rows{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.kan-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 8px 12px}
+.kan-row-head{display:flex;align-items:center;gap:8px;padding:0 6px 8px}
+.kan-row-title{font-weight:700;font-size:14px;cursor:text;border-radius:6px;padding:2px 6px;min-width:60px}
+.kan-row-title:hover{background:var(--surface-2)}
+.kan-row-actions{margin-left:auto;display:flex;gap:4px}
+.kan-handle{color:var(--text-faint);opacity:.5;cursor:grab;letter-spacing:-2px;font-size:13px;user-select:none}
+.kan-row-head:hover .kan-handle,.kan-item:hover .kan-handle{opacity:.9}
+.kan-board{display:flex;gap:10px;align-items:flex-start;overflow-x:auto;padding:2px 6px 6px;min-height:120px}
+.kan-col{width:272px;flex:none;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px}
+.kan-col-head{display:flex;align-items:center;gap:8px;padding:2px 2px 8px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.kan-col-title{font-weight:600;font-size:13.5px;cursor:text;border-radius:6px;padding:2px 6px;flex:1;min-width:0;overflow-wrap:anywhere}
+.kan-col-title:hover{background:var(--surface-3)}
+.kan-count{font-size:11.5px;color:var(--text-faint);background:var(--surface-3);border-radius:999px;padding:1px 8px}
+.kan-col-actions{display:flex;gap:4px}
+.kan-cards{display:flex;flex-direction:column;gap:6px;min-height:24px}
+.kan-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:grab}
+.kan-card:hover{border-color:var(--border)}
+.kan-card.dragging,.kan-col.dragging,.kan-row.dragging,.kan-item.dragging{opacity:.4}
+.kan-card-text{font-size:13.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text;border-radius:4px}
+.kan-card-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center}
+.kan-link{font-size:11.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 7px;
+  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kan-link::before{content:"↗ "}
+.kan-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#fff;border-radius:999px;
+  padding:1px 8px;cursor:pointer;user-select:none}
+.kan-tag:hover{filter:brightness(1.15)}
+.kan-tag-x{border:0;background:none;color:#fff;opacity:.75;cursor:pointer;font-size:12px;padding:0;line-height:1}
+.kan-tag-x:hover{opacity:1}
+.kan-desc-ind{color:var(--text-faint);font-size:12px;margin-left:auto}
+.kan-del{border:0;background:none;color:var(--text-faint);cursor:pointer;font-size:15px;line-height:1;
+  border-radius:6px;padding:2px 6px}
+.kan-del:hover{background:var(--surface-3);color:var(--text)}
+.kan-del.armed{background:rgba(242,109,120,.18);color:#F26D78}
+.kan-card-del{position:absolute;top:4px;right:4px;opacity:0}
+.kan-card:hover .kan-card-del{opacity:1}
+.kan-add-card,.kan-add-col{border:1px dashed var(--border);background:none;color:var(--text-faint);border-radius:8px;
+  padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer;text-align:left;margin-top:6px}
+.kan-add-col{flex:none;width:150px;margin-top:0;align-self:flex-start;text-align:center;padding:10px}
+.kan-add-card:hover,.kan-add-col:hover{color:var(--accent);border-color:var(--accent)}
+.kan-add-editor{margin-top:6px}
+.kan-edit{width:100%;box-sizing:border-box;background:var(--surface);color:var(--text);border:1px solid var(--accent);
+  border-radius:6px;font:inherit;font-size:13.5px;line-height:1.45;padding:5px 8px;outline:none;resize:vertical}
+.kan-dropline{height:3px;border-radius:2px;background:var(--accent);flex:none;margin:0;pointer-events:none}
+.kan-dropline.v{width:3px;height:auto;align-self:stretch;min-height:80px}
+.kan-hidden{display:none}
+.kan-empty{color:var(--text-faint);font-size:13px;padding:14px;text-align:center}
+.kan-inbox{width:0;border-left:1px solid var(--border);display:none;flex-direction:column;background:var(--surface)}
+.kan-inbox.open{display:flex;width:300px;flex:none}
+.kan-inbox-head{font-weight:700;font-size:13px;padding:12px 14px 4px}
+.kan-inbox-hint{color:var(--text-faint);font-size:11.5px;padding:0 14px 8px}
+.kan-inbox-input{margin:0 12px 10px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;font:inherit;font-size:13px;padding:6px 9px;outline:none;resize:none}
+.kan-inbox-input:focus{border-color:var(--accent)}
+.kan-inbox-list{flex:1;overflow-y:auto;padding:0 12px 12px;display:flex;flex-direction:column;gap:5px}
+.kan-item{display:flex;align-items:flex-start;gap:7px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:8px;padding:7px 9px;cursor:grab}
+.kan-item .kan-handle{margin-top:1px}
+.kan-item input[type=checkbox]{margin-top:2px;accent-color:var(--accent)}
+.kan-item-text{flex:1;min-width:0;font-size:13px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.kan-item-text.done{text-decoration:line-through;color:var(--text-faint)}
+.kan-menu{position:fixed;z-index:60;min-width:180px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:10px;padding:5px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.kan-menu-item{border:0;background:none;color:var(--text);text-align:left;font:inherit;font-size:13.5px;
+  padding:7px 10px;border-radius:7px;cursor:pointer}
+.kan-menu-item:hover{background:var(--surface-3)}
+.kan-menu-item.danger{color:#F26D78}
+dialog.kan-modal{width:min(560px,92vw);max-height:84vh;overflow:auto}
+.kan-modal h3{margin:0 0 2px}
+.kan-modal-sub{color:var(--text-faint);font-size:12.5px;margin-bottom:12px;overflow-wrap:anywhere}
+.kan-modal label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);
+  font-weight:700;margin:14px 0 6px}
+.kan-modal-desc{width:100%;box-sizing:border-box;background:var(--surface-2);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;font:inherit;font-size:13.5px;padding:8px 10px;outline:none;resize:vertical}
+.kan-modal-desc:focus{border-color:var(--accent)}
+.kan-modal-links{display:flex;flex-direction:column;gap:6px}
+.kan-modal-linkrow{display:flex;gap:6px;align-items:center}
+.kan-modal-linkrow input{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:8px;
+  font:inherit;font-size:13px;padding:6px 9px;outline:none}
+.kan-modal-linkrow input:first-child{width:130px;flex:none}
+.kan-modal-linkrow input:nth-child(2){flex:1;min-width:0}
+.kan-modal-linkrow input:focus{border-color:var(--accent)}
+.kan-modal-tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.kan-modal-tags input{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:8px;
+  font:inherit;font-size:13px;padding:5px 9px;outline:none;flex:1;min-width:140px}
+.kan-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+
+
+/* ---- diagram editor (apps/draw.js, spec 12.7) ---- */
+.draw-toolbar{display:flex;gap:4px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.draw-toolbar .tkey{opacity:.5;font-size:10.5px;font-family:var(--mono);margin-right:5px}
+.draw-stylebar{display:flex;gap:14px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.draw-swatches{display:inline-flex;gap:4px;align-items:center}
+.draw-swatches[hidden]{display:none}
+.draw-swatches .muted{font-size:11.5px;margin-right:2px}
+.draw-swatch{width:20px;height:20px;border-radius:6px;border:1px solid var(--border);cursor:pointer;
+  color:var(--text-faint);font-size:12px;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.draw-swatch.np-on{outline:2px solid var(--accent);outline-offset:1px}
+.draw-zoombar{position:absolute;left:12px;bottom:12px;display:flex;gap:2px;align-items:center;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:2px 6px;z-index:5}
+.draw-zoombar span{font-size:12px;color:var(--text-faint);min-width:40px;text-align:center}
+.draw-zoombar select{margin-left:6px;padding:4px 6px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);font:inherit;font-size:12px}
+.draw-textedit{position:absolute;z-index:8;min-width:120px;min-height:1.4em;background:var(--surface-2);
+  color:var(--text);border:1px dashed var(--accent);border-radius:6px;padding:2px 6px;font:inherit;resize:both}
+

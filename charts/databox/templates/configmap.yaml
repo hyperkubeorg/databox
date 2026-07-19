@@ -1,0 +1,65 @@
+# Entrypoint script implementing the chart's bootstrap/join logic
+# (§16.2 on Kubernetes):
+#
+#   pod 0        bootstraps a brand-new cluster (first install only)
+#   pods 1..N-1  ask pod 0 for a join token, then start with --join
+#   any pod      whose volume already holds cluster state just resumes —
+#                restarts and upgrades never re-bootstrap or re-join
+#
+# Join tokens require an authenticated admin, so the script logs in to
+# pod 0 as root using the chart-generated password (DATABOX_PASSWORD is
+# how the CLI accepts a non-interactive password).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "databox.fullname" . }}-scripts
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+data:
+  entrypoint.sh: |
+    #!/bin/sh
+    set -eu
+
+    # Stable, DNS-resolvable address peers and clients use to reach this
+    # pod — the StatefulSet identity contract.
+    ADVERTISE="${POD_NAME}.${HEADLESS_SERVICE}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}:8443"
+
+    # Restart/upgrade path: a node that already has cluster state on its
+    # volume resumes with its stored identity. No bootstrap, no join.
+    if [ -d "${DATABOX_DATA_DIR}/pebble" ]; then
+      echo "existing data directory found — resuming node"
+      exec databox server --advertise "${ADVERTISE}"
+    fi
+
+    # Pod ordinal = everything after the last '-' in the pod name.
+    ORDINAL="${POD_NAME##*-}"
+
+    if [ "${ORDINAL}" = "0" ]; then
+      # First node of a fresh cluster: bootstrap. The generated root
+      # password (mounted from the Secret) is consumed exactly once here;
+      # the PSK arrives via the DATABOX_PSK environment variable.
+      echo "pod 0 with empty volume — bootstrapping new cluster"
+      exec databox server \
+        --advertise "${ADVERTISE}" \
+        --root-password-file /etc/databox/auth/root-password
+    fi
+
+    # Pods > 0: fetch a join token from pod 0, retrying until it answers.
+    POD0="${STATEFULSET_NAME}-0.${HEADLESS_SERVICE}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}:8443"
+    export DATABOX_PASSWORD="$(cat /etc/databox/auth/root-password)"
+    while true; do
+      # `echo y` answers the CLI's trust-on-first-use certificate prompt:
+      # pod 0's cert is issued by the cluster's embedded CA, which this
+      # fresh pod cannot know yet. Trust inside the pod network is
+      # anchored by the shared PSK + root password, both from the Secret.
+      if TOKEN="$(echo y | databox cluster join-token --endpoint "${POD0}" --user root 2>/dev/null)" \
+         && [ -n "${TOKEN}" ]; then
+        break
+      fi
+      echo "waiting for ${POD0} to issue a join token..."
+      sleep 5
+    done
+    unset DATABOX_PASSWORD
+
+    echo "joining cluster via ${POD0}"
+    exec databox server --advertise "${ADVERTISE}" --join "${TOKEN}"

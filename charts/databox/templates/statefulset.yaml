@@ -1,0 +1,161 @@
+# The storage cluster (§18): a StatefulSet, because Raft
+# peers need stable network identities and per-pod persistent volumes.
+# Bootstrap/join logic lives in the entrypoint script (configmap.yaml).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "databox.fullname" . }}
+  labels:
+    {{- include "databox.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  # Ties pod DNS names to the headless Service:
+  # <pod>.<headless>.<ns>.svc.<clusterDomain>
+  serviceName: {{ include "databox.headlessServiceName" . }}
+  # Parallel: pods 1..N-1 wait for pod 0 themselves (join-token retry loop
+  # in the entrypoint), so serializing pod creation would only slow things
+  # down — and it lets all pods restart at once after a full outage, which
+  # OrderedReady cannot do when quorum needs several pods up.
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "databox.selectorLabels" . | nindent 6 }}
+      # component distinguishes storage pods from the gateway Deployments,
+      # which share the name/instance labels — without it, svc/databox
+      # would select gateway pods too (breaking port-forward and adding
+      # portless backends). NOTE: selectors are immutable; changing this on
+      # an existing install requires delete+reinstall of the StatefulSet.
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "databox.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "databox.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: databox
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          # The bootstrap-or-join entrypoint (see configmap.yaml).
+          command: ["/bin/sh", "/etc/databox/scripts/entrypoint.sh"]
+          env:
+            # Pod identity — the script derives the ordinal and the
+            # stable advertise address from these.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: STATEFULSET_NAME
+              value: {{ include "databox.fullname" . }}
+            - name: HEADLESS_SERVICE
+              value: {{ include "databox.headlessServiceName" . }}
+            - name: CLUSTER_DOMAIN
+              value: {{ .Values.clusterDomain }}
+            # Node configuration via DATABOX_* environment (config
+            # precedence: flags > env > file > defaults).
+            - name: DATABOX_DATA_DIR
+              value: /var/lib/databox
+            # The shared node PSK from the generated Secret — pod 0
+            # bootstraps with it and join tokens carry it to the rest.
+            - name: DATABOX_PSK
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "databox.secretName" . }}
+                  key: psk
+            # Operator-supplied DATABOX_* tunables (see values.yaml extraEnv).
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          # Databox serves TLS from startup; /healthz is unauthenticated
+          # and answers on both probes (§18: probes over HTTPS).
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          # Readiness is the SERVICEABILITY gate (/readyz): a node that is
+          # bootstrapping, electing, or catching up after a join answers
+          # 503 and receives no Service traffic until it can serve.
+          # Liveness stays on the dumb /healthz — a catching-up node must
+          # not be killed for being busy.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            # All persistent node state: PebbleDB, blob chunks, identity.
+            - name: data
+              mountPath: /var/lib/databox
+            # Root password file (consumed once, at pod-0 bootstrap) and
+            # the same value used by joiners to authenticate against pod 0.
+            - name: auth
+              mountPath: /etc/databox/auth
+              readOnly: true
+            - name: scripts
+              mountPath: /etc/databox/scripts
+              readOnly: true
+      volumes:
+        - name: auth
+          secret:
+            secretName: {{ include "databox.secretName" . }}
+        - name: scripts
+          configMap:
+            name: {{ include "databox.fullname" . }}-scripts
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  # One PersistentVolumeClaim per pod, retained across pod restarts and
+  # reschedules — a databox node's identity lives on its volume.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.storage.className }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.size }}

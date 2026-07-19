@@ -1,0 +1,10 @@
+REFERENCES/
+bin/
+coverage.out
+# zero-config `databox server` fallback data dir (run from repo root)
+databox-data/
+# redirected server/gateway output from manual testing
+*.log
+.claude/
+.idea/
+meetthecluster.github.io/

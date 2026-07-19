@@ -1,0 +1,64 @@
+/* video.css — the Video app's poster-forward layer over the Slate
+   tokens: shelves (horizontal strips), poster grids, the title hero,
+   and episode rows. Palette comes ENTIRELY from tokens.css. */
+
+.mediapage { max-width: 1180px; margin: 0 auto; }
+
+.mhead { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.mhead h1 { margin: 0; font-family: var(--display); font-size: 24px; }
+.mspring { flex: 1; }
+.msearch { display: flex; gap: 6px; flex: 1; max-width: 380px; }
+.msearch input {
+  flex: 1; padding: 7px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); font: inherit; font-size: 13.5px;
+}
+.msearch input:focus { outline: none; border-color: var(--accent); }
+
+.mshelf { margin-top: 22px; }
+.mshelf h2 { font-family: var(--display); font-size: 16px; margin: 0 0 10px; }
+.mshelf h2 .dim { font-size: 13px; font-weight: 400; }
+
+.mstrip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+.mstrip .mposter { flex: 0 0 150px; }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+
+.mposter { display: block; text-decoration: none; color: var(--text); min-width: 0; }
+.mposter b { display: block; margin-top: 7px; font-size: 13.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mposter .msub { display: block; font-size: 12px; color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mposter:hover .mart { border-color: var(--accent); }
+
+.mart { position: relative; display: block; aspect-ratio: 2 / 3; border-radius: 12px;
+  overflow: hidden; background: var(--surface-2); border: 1px solid var(--border); }
+.mart--square { aspect-ratio: 1 / 1; }
+.mart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mart__glyph { display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%; font-size: 34px; font-weight: 700; color: var(--text-dim); }
+.mart--big { width: 200px; flex: 0 0 200px; }
+
+.mresume { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.mresume i { display: block; height: 100%; background: var(--accent); }
+
+.mhero { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }
+.mhero__meta { flex: 1; min-width: 260px; }
+.mhero__meta h1 { margin: 2px 0; font-family: var(--display); font-size: 26px; }
+.mhero__meta .dim { margin: 0; font-size: 12px; letter-spacing: .08em; }
+.msub { color: var(--text-dim); font-size: 13.5px; margin: 0; }
+.mdesc { max-width: 640px; color: var(--text-dim); font-size: 14px; line-height: 1.55; }
+.mactions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+
+.eplist { display: flex; flex-direction: column; gap: 4px; }
+.eprow { display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+  border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+  text-decoration: none; color: var(--text); font-size: 13.5px; }
+.eprow:hover { border-color: var(--accent); }
+.eprow.is-watched { opacity: .6; }
+.epno { font-family: ui-monospace,monospace; font-size: 12px; color: var(--text-dim); min-width: 56px; }
+.epthumb { width: 64px; height: 36px; object-fit: cover; border-radius: 6px; background: var(--surface-2); flex: none; }
+.eptitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.epstate { font-size: 12px; color: var(--text-dim); }
+
+.mmanage { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 26px; }
+.inline { display: inline; }

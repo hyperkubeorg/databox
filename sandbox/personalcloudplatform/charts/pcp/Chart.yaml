@@ -1,0 +1,12 @@
+# Chart.yaml — the Personal Cloud Platform example app: a stateless web
+# app (launcher + Drive/Email/Calendar/Video/Music) whose entire
+# persistence layer is a databox cluster.
+apiVersion: v2
+name: pcp
+description: Personal Cloud Platform example (Drive/Email/Calendar/Video/Music + gateways) backed by databox
+type: application
+# The release workflow overrides both at package time with the run's UTC
+# date stamp (YYYYMMDD.HHMMSS): a published chart deploys its matching
+# image; a git checkout deploys latest.
+version: 0.1.0
+appVersion: "latest"
